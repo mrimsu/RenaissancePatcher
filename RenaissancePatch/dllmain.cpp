@@ -85,7 +85,8 @@ DWORD WINAPI mainHakVzlom() {
             wchar_t buf[255] = { 0 };
             DWORD dwBufSize = sizeof(buf);
             // сначала грузим настройки
-            if (RegQueryValueExA(hKey, "MrimDomain", 0, &dwType, (LPBYTE)buf, &dwBufSize) == ERROR_SUCCESS)
+            // тут раньше был смешной баг, из-за которого патчер не работал на Windows XP
+            if (RegQueryValueExW(hKey, L"MrimDomain", 0, &dwType, (LPBYTE)buf, &dwBufSize) == ERROR_SUCCESS)
             {
                 // совершенно не безопасно, но функция в if и так защищает от переполнения буфера (выдаст ошибку, если буфер милипиздрический)
                 MrimProtocolDomain = WideToChar(buf);
@@ -109,7 +110,7 @@ DWORD WINAPI mainHakVzlom() {
             // буфер для домена авок
             wchar_t bufAva[255] = { 0 };
             DWORD dwAvaBufSize = sizeof(buf);
-            if (RegQueryValueExA(hKey, "MrimAvatarDomain", 0, &dwType, (LPBYTE)bufAva, &dwAvaBufSize) == ERROR_SUCCESS)
+            if (RegQueryValueExW(hKey, L"MrimAvatarDomain", 0, &dwType, (LPBYTE)bufAva, &dwAvaBufSize) == ERROR_SUCCESS)
             {
                 MrimAvatarsDomain = WideToChar(bufAva);
             }

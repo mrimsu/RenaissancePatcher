@@ -12,16 +12,26 @@ DLL библиотека для встраивания внутри клиент
 
 ## Требования для компиляции
 
-* Visual Studio 2022 любой редакции
+С помощью Visual Studio 2022 любой редакции:
+
 * Windows 10 SDK (можно установить в Visual Studio Installer)
 * C++ Windows XP Support for VS 2017 (v141) tools (можно установить в Visual Studio Installer)
 
+С помощью Visual Studio 2008
+
+* Windows 2000 и выше
+
 ## Минимальные требования для работы патча
 
-При сборке через MSVC:
+При сборке через MSVC17:
 
 * Windows XP SP3
 * Visual Studio 2017 redist
+
+При сборке через MSVC08:
+
+* Windows 2000
+* Visual Studio 2008 redist
 
 При сборке через GCC/cmake:
 
