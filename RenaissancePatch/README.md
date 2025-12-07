@@ -34,6 +34,7 @@ DLL библиотека для встраивания внутри клиент
 * Visual Studio 2008 redist
 
 При сборке через GCC/cmake:
+MinGW
 
 _TBD_
 
