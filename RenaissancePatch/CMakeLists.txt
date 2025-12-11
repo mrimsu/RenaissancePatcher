@@ -1,52 +1,32 @@
-cmake_minimum_required(VERSION 3.10)
-project(RenaissancePatch)
+cmake_minimum_required(VERSION 4.0)
+project("RenaissancePatch" CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set (CMAKE_CXX_STANDARD 11)
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
-# === GCC/CMake Build Instructions ===
-#
-# 1. Make sure GCC (MinGW-w64) is installed and added to your PATH.
-# 2. Run CMake with the MinGW Makefiles generator:
-#      cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..
-# 3. Build with:
-#      mingw32-make
-#
-# If using MSVC, open a Developer Command Prompt and use the default generator.
-#
-# === x86 and Windows 2000/XP Compatibility ===
-# This project builds for x86 only. Windows 2000/XP compatibility is enabled.
+add_library(${PROJECT_NAME} SHARED dllmain.cpp)
 
-# Force x86 build
-set(CMAKE_GENERATOR_PLATFORM x86)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
 
-# Set minimum Windows version for compatibility
-add_definitions(-D_WIN32_WINNT=0x0500) # 0x0500 = Windows 2000, 0x0501 = Windows XP
+if (CMAKE_SIZEOF_VOID_P EQUAL 4)
+    message(STATUS "32-bit target detected, building")
+else ()
+    message(FATAL_ERROR "This patch is meant only for 32-bit targets as Agent itself is built for such")
+endif ()
 
-# Source files
-set(SOURCES
-    dllmain.cpp
-)
 
-# Include directories
-include_directories(
-    include
-)
+if (MSVC)
+  message(STATUS "Building with MSVC")
+  add_compile_definitions(_UNICODE=1 UNICODE=1)
+  add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+  target_link_libraries(${PROJECT_NAME} wsock32.lib ws2_32.lib) 
+  target_compile_options(${PROJECT_NAME} PRIVATE /W4 /WX)
+else ()
+  message(STATUS "Building with MinGW")
+  add_compile_definitions(_WIN32_WINNT_WIN2K)
+  target_link_libraries(${PROJECT_NAME} wsock32 ws2_32 -static -static-libgcc -static-libstdc++) 
+  target_compile_options(${PROJECT_NAME} PRIVATE -municode -Wall -Wextra -Werror -O2)
+endif ()
 
-# Library directories
-link_directories(
-    lib
-)
-
-# Add DLL target
-add_library(RenaissancePatch SHARED ${SOURCES})
-
-# Link MinHook and ws2_32
-target_link_libraries(RenaissancePatch MinHook.MinGW ws2_32)
-
-# Output directories
 set_target_properties(RenaissancePatch PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib

@@ -34,6 +34,8 @@ DLL библиотека для встраивания внутри клиент
 * Visual Studio 2008 redist
 
 При сборке через GCC/cmake:
+* MSYS2
+* MinGW i686 MSVCRT
 
 _TBD_
 
