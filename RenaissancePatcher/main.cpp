@@ -38,7 +38,7 @@ LRESULT CALLBACK WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 				CLIP_CHARACTER_PRECIS,
 				CLEARTYPE_QUALITY,
 				DEFAULT_PITCH,
-				L"Segoe UI" // ΜΛΜΛ СМΘΤΡΝ Я ПΝШY КΛΚ МΛNКРΘСΘФТ
+				L"Verdana" // ΜΛΜΛ СМΘΤΡΝ Я ПΝШY КΛΚ МΛNКРΘСΘФТ
 			 ),
 
 			 BodyFont = CreateFontW(
@@ -55,7 +55,7 @@ LRESULT CALLBACK WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 				CLIP_CHARACTER_PRECIS,
 				CLEARTYPE_QUALITY,
 				DEFAULT_PITCH,
-				L"Segoe UI"
+				L"Verdana"
 			 );
 			
 			SelectObject(DC, HeadingFont);

@@ -28,8 +28,6 @@ BOOL WINAPI AddImport(PeHeaders *PeHdr, Metadata *SectionData, PIMAGE_NT_HEADERS
 
 	NewNt32->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress = NewSectionTable[PeHdr->Nt32->FileHeader.NumberOfSections].VirtualAddress;
 	NewNt32->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size += sizeof(IMAGE_IMPORT_DESCRIPTOR);
-	NewNt32->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IAT].VirtualAddress = 0;
-	NewNt32->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IAT].Size = 0;
 
 	PIMAGE_IMPORT_DESCRIPTOR NewDescEntry = (PIMAGE_IMPORT_DESCRIPTOR)SectionData[PeHdr->Nt32->FileHeader.NumberOfSections].DataPointer;
 
@@ -88,6 +86,7 @@ BOOL WINAPI CreateNewSection(PSTR SectionName, DWORD Size, PeHeaders *PeHdr, Met
 
 	SectionData[PeHdr->Nt32->FileHeader.NumberOfSections].Size = Size;
 	SectionData[PeHdr->Nt32->FileHeader.NumberOfSections].Offset = SecOffset;
+
 	return TRUE;
 }
 
