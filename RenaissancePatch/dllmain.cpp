@@ -37,8 +37,7 @@ char* WideToChar(const wchar_t* wideStr) {
     return buffer;
 }
 
-__declspec(dllexport) DWORD WINAPI mainHakVzlom();
-
+extern "C" __declspec(dllexport) DWORD __cdecl mainHakVzlom(); 
 
 PVOID EnableTrampoline(PVOID Original, PVOID Detour) {
     CONST SIZE_T Length = 5;
@@ -67,8 +66,7 @@ PVOID EnableTrampoline(PVOID Original, PVOID Detour) {
 }
 
 // я эту функцию специально так назвал, я не нуп
-DWORD WINAPI mainHakVzlom() {
-
+DWORD __cdecl mainHakVzlom() {
     HKEY hKey = NULL;
     const wchar_t* regPatch = L"SOFTWARE\\Renaissance";
 		// получаем доступ к реестру (при отсутствии ключа - создаём его) 
@@ -152,8 +150,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         HMODULE WinSock2dll = GetModuleHandleW(L"ws2_32.dll");
         FARPROC ModuleFuncOffset = GetProcAddress(WinSock2dll, "gethostbyname");
         OriginalGethostbyname = (_gethostbyname) EnableTrampoline((PVOID)ModuleFuncOffset, (PVOID)hijackedgethostbyname);
-
-        CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)(DWORD)&mainHakVzlom, NULL, 0, NULL);
+        mainHakVzlom();
 	}
     case DLL_THREAD_ATTACH:
     case DLL_THREAD_DETACH:

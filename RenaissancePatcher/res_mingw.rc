@@ -1,0 +1,9 @@
+﻿#include "winres.h"
+#include "resources.h"
+
+1 RT_MANIFEST "Manifest.manifest"
+
+IDR_RCDATA1 RCDATA "dll\\flashdll.dll"
+IDR_RCDATA2 RCDATA "..\\build\\bin\\RenaissancePatch.dll"
+
+IDI_ICON1 ICON ren128.ico

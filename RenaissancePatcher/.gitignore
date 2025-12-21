@@ -368,3 +368,6 @@ FodyWeavers.xsd
 /Release Inj
 
 build
+.vscode
+.vs
+dll/flashdll.dll
