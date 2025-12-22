@@ -22,7 +22,7 @@ BOOL WINAPI AddImport(PeHeaders *PeHdr, Metadata *SectionData, PIMAGE_NT_HEADERS
 		if (strcmp(ImportName, IMPDLL) == 0) return FALSE;
 	}
 
-	CONST DWORD SectionSize = ALIGN(OldImportTableSize, 512) + 0x200;
+	CONST DWORD SectionSize = ALIGN(OldImportTableSize + 0x200, PeHdr->Nt32->OptionalHeader.SectionAlignment);
 
 	if (!CreateNewSection(IMPSEC, SectionSize, PeHdr, SectionData, NewNt32, NewSectionTable)) return FALSE;
 

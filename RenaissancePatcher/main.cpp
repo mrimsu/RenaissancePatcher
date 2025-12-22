@@ -128,7 +128,7 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE OldInst, LPSTR CmdLine, INT Cmd
     WndClass.hInstance = Instance;
     WndClass.hCursor = LoadCursorW(Instance, IDC_ARROW);
     WndClass.hbrBackground = (HBRUSH)COLOR_WINDOW;
-    WndClass.hIcon = LoadIconW(Instance, IDI_APPLICATION);
+    WndClass.hIcon = LoadIconW(Instance, MAKEINTRESOURCEW(IDI_ICON1));
     WndClass.lpszClassName = ClassName;
     WndClass.lpfnWndProc = WindowProc;
     WndClass.style = 0;
