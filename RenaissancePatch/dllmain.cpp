@@ -100,7 +100,7 @@ DWORD __cdecl mainHakVzlom(VOID) {
             MrimProtocolDomain = (char*)DEFAULT_DOMAIN;
             MrimAvatarsDomain = (char*)DEFAULT_AVATAR_DOMAIN;
             // юзера уведомляем
-            MessageBoxW(NULL, L"Похоже, вы установили инджектор ручным способом. Отредактируйте параметры на соответствующие вашим в Редакторе Реестра по адресу HKCU/SOFTWARE/Renaissance", L"Renaissance Patch", MB_OK | MB_ICONINFORMATION);
+            MessageBoxW(NULL, L"Похоже, вы установили патч ручным способом. Отредактируйте параметры на соответствующие вашим в Редакторе Реестра по адресу HKCU/SOFTWARE/Renaissance", L"Renaissance Patch", MB_OK | MB_ICONINFORMATION);
         }
         memset(buf, 0, sizeof(buf));
 
@@ -148,7 +148,7 @@ BOOL CheckWinSock(VOID) {
     }
 
     do {
-        if (wcsicmp(ModuleEntry.szModule, L"ws2_32.dll") == 0) {
+        if (_wcsicmp(ModuleEntry.szModule, L"ws2_32.dll") == 0) {
             CloseHandle(ProcSnapshot);
             return TRUE;
         }
@@ -168,7 +168,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
         switch (ul_reason_for_call) {
 	        case DLL_PROCESS_ATTACH: {
                 if (!CheckWinSock()) {
-                    MessageBoxW(NULL, L"Данная программа не загрузила WinSock2 и вероятно была пропатчен не тот exe файл", L"Ошибка", MB_OK | MB_ICONERROR);
+                    MessageBoxW(NULL, L"Данная программа не загрузила WinSock2. Вероятно был пропатчен не тот exe файл", L"Ошибка", MB_OK | MB_ICONERROR);
                     ExitProcess(1);
                 }
 

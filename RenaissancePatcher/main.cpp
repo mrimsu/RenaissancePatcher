@@ -7,7 +7,7 @@
 #define BUTTON_1 1
 
 BOOL WINAPI PatchPE(PWSTR InputFile, PWSTR OutFile);
-BOOL WINAPI SetStrictServer(VOID);
+BOOL WINAPI SetRegistryValues(VOID);
 BOOL WINAPI FileExists(PWSTR FilePath);
 BOOL WINAPI MainRoutine(HWND Hwnd, PWSTR FilePath);
 
@@ -117,7 +117,7 @@ VOID WINAPI KillRunningProcess(PWSTR Filepath) {
 	if (!Process32First(ProcSnapshot, &ProcEntry)) return;
 
 	do {
-		if (wcsicmp(PathFindFileNameW(Filepath), ProcEntry.szExeFile) == 0) {
+		if (_wcsicmp(PathFindFileNameW(Filepath), ProcEntry.szExeFile) == 0) {
 			HANDLE Process = OpenProcess(PROCESS_ALL_ACCESS, FALSE, ProcEntry.th32ProcessID);
 
 			if (!Process) {
@@ -269,9 +269,9 @@ BOOL WINAPI PatchPE(PWSTR InputFile, PWSTR OutFile) {
 	return TRUE;
 }
 
-BOOL WINAPI SetStrictServer(VOID) {
+BOOL WINAPI SetRegistryValues(VOID) {
 	HKEY Hkey;
-    RegCreateKeyW(HKEY_CURRENT_USER, L"Software\\Mail.ru\\Agent", &Hkey);
+    if (RegCreateKeyW(HKEY_CURRENT_USER, L"Software\\Mail.ru\\Agent", &Hkey) != ERROR_SUCCESS) return FALSE;
     
     PCWSTR Value = L"proto.mrim.su:2041"; 
 
@@ -280,6 +280,21 @@ BOOL WINAPI SetStrictServer(VOID) {
         return FALSE;
     }
     RegCloseKey(Hkey);
+
+	if (RegCreateKeyW(HKEY_CURRENT_USER, L"Software\\Renaissance", &Hkey) != ERROR_SUCCESS) return FALSE;
+
+	//rn it sets default values. Option to change them is WIP
+
+	DWORD FirstTimeTmp = 0;
+
+	PCWSTR DefaultDomain = L"mrim.su",
+		DefaultAvatarDomain = L"obraz.mrim.su";
+
+    RegSetValueExW(Hkey, L"FirstTime", 0, REG_DWORD, (BYTE *)&FirstTimeTmp, sizeof(FirstTimeTmp));
+    RegSetValueExW(Hkey, L"MrimDomain", 0, REG_SZ, (BYTE*)DefaultDomain, sizeof(WCHAR) * wcslen(DefaultDomain));
+    RegSetValueExW(Hkey, L"MrimAvatarDomain", 0, REG_SZ, (BYTE*)DefaultAvatarDomain, sizeof(WCHAR) * wcslen(DefaultAvatarDomain));
+
+	RegCloseKey(Hkey);
 
     return TRUE;
 }
@@ -330,11 +345,10 @@ BOOL WINAPI MainRoutine(HWND Hwnd, PWSTR FilePath) {
 		for (DWORD a = 0; a < 2; a++)
 			ExtractRes(DestPath, DllNames[a], ResIds[a], RT_RCDATA);
 
-		if (!SetStrictServer())
+		if (!SetRegistryValues())
 			MessageBoxW(
 				Hwnd, 
-				L"Не удалось задать значение HKCU\\Software\\Mail.ru\\Agent | strict_server. \
-				Необходимо ввести значение proto.mrim.su:2041", 
+				L"Не удалось задать значение HKCU\\Software\\Mail.ru\\Agent | strict_server. Необходимо ввести значение proto.mrim.su:2041", 
 				L"Возможная проблема", 
 				MB_OK | MB_ICONEXCLAMATION
 			);
