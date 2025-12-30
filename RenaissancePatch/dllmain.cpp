@@ -3,6 +3,8 @@
 
 #include <WinSock2.h>
 #include <windows.h>
+#include <psapi.h>
+#include <tlhelp32.h>
 
 // дефайны для дефолтных значений
 #define DEFAULT_DOMAIN "mrim.su"
@@ -66,7 +68,7 @@ PVOID EnableTrampoline(PVOID Original, PVOID Detour) {
 }
 
 // я эту функцию специально так назвал, я не нуп
-DWORD __cdecl mainHakVzlom() {
+DWORD __cdecl mainHakVzlom(VOID) {
     HKEY hKey = NULL;
     const wchar_t* regPatch = L"SOFTWARE\\Renaissance";
 		// получаем доступ к реестру (при отсутствии ключа - создаём его) 
@@ -74,8 +76,7 @@ DWORD __cdecl mainHakVzlom() {
         MessageBoxW(NULL, L"Не удалось получить доступ к Реестру", L"Критическая ошибка Renaissance Patch", MB_OK | MB_ICONERROR);
         RegCloseKey(hKey);
     }
-    else 
-    {
+    else {
         // буфер для домена протокола
         DWORD dwType = REG_SZ;
         wchar_t buf[255] = { 0 };
@@ -135,28 +136,60 @@ DWORD __cdecl mainHakVzlom() {
     return 0;
 }
 
+//fool-proof 
+BOOL CheckWinSock(VOID) {
+    HANDLE ProcSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetCurrentProcessId());
+    MODULEENTRY32W ModuleEntry;
+    ModuleEntry.dwSize = sizeof(MODULEENTRY32);
 
-BOOL APIENTRY DllMain( HMODULE hModule,
+    if (!Module32FirstW(ProcSnapshot, &ModuleEntry)) {
+        CloseHandle(ProcSnapshot);
+        return FALSE;
+    }
+
+    do {
+        if (wcsicmp(ModuleEntry.szModule, L"ws2_32.dll") == 0) {
+            CloseHandle(ProcSnapshot);
+            return TRUE;
+        }
+    } while (Module32Next(ProcSnapshot, &ModuleEntry));
+
+    CloseHandle(ProcSnapshot);
+    return FALSE;
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved
                      )
-{
-    UNREFERENCED_PARAMETER(hModule);
-    UNREFERENCED_PARAMETER(lpReserved);
-    switch (ul_reason_for_call)
     {
-	case DLL_PROCESS_ATTACH: {
-    
-        HMODULE WinSock2dll = GetModuleHandleW(L"ws2_32.dll");
-        FARPROC ModuleFuncOffset = GetProcAddress(WinSock2dll, "gethostbyname");
-        OriginalGethostbyname = (_gethostbyname) EnableTrampoline((PVOID)ModuleFuncOffset, (PVOID)hijackedgethostbyname);
-        mainHakVzlom();
-	}
-    case DLL_THREAD_ATTACH:
-    case DLL_THREAD_DETACH:
-    case DLL_PROCESS_DETACH:
-        break;
-    }
-    return TRUE;
+        UNREFERENCED_PARAMETER(hModule);
+        UNREFERENCED_PARAMETER(lpReserved);
+        switch (ul_reason_for_call) {
+	        case DLL_PROCESS_ATTACH: {
+                if (!CheckWinSock()) {
+                    MessageBoxW(NULL, L"Данная программа не загрузила WinSock2 и вероятно была пропатчен не тот exe файл", L"Ошибка", MB_OK | MB_ICONERROR);
+                    ExitProcess(1);
+                }
+
+                HMODULE WinSock2dll = GetModuleHandleW(L"ws2_32.dll");
+
+                FARPROC ModuleFuncOffset = GetProcAddress(WinSock2dll, "gethostbyname");
+
+                if (!ModuleFuncOffset) {
+                    MessageBoxW(NULL, L"В этой имплементации WinSock2 отсутствует функция gethostbyname", L"Ошибка", MB_OK | MB_ICONERROR);
+                    ExitProcess(1);
+                }
+
+                OriginalGethostbyname = (_gethostbyname) EnableTrampoline((PVOID)ModuleFuncOffset, (PVOID)hijackedgethostbyname);
+                mainHakVzlom();
+                break;
+	        }
+            case DLL_THREAD_ATTACH:
+            case DLL_THREAD_DETACH:
+            case DLL_PROCESS_DETACH:
+                break;
+        }
+        return TRUE;
 }
 

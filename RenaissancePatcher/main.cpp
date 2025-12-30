@@ -107,7 +107,32 @@ LRESULT CALLBACK WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
     return 0;
 }
 
-int WINAPI WinMain(HINSTANCE Instance, HINSTANCE OldInst, LPSTR CmdLine, INT CmdShow) {
+VOID WINAPI KillRunningProcess(PWSTR Filepath) {
+	PROCESSENTRY32W ProcEntry;
+	ProcEntry.dwSize = sizeof(PROCESSENTRY32W);
+	HANDLE ProcSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	
+	if (!ProcSnapshot) return;
+
+	if (!Process32First(ProcSnapshot, &ProcEntry)) return;
+
+	do {
+		if (wcsicmp(PathFindFileNameW(Filepath), ProcEntry.szExeFile) == 0) {
+			HANDLE Process = OpenProcess(PROCESS_ALL_ACCESS, FALSE, ProcEntry.th32ProcessID);
+
+			if (!Process) {
+				CloseHandle(Process);
+				return;
+			}
+
+			TerminateProcess(Process, 0);
+			CloseHandle(Process);
+		}
+	} while (Process32NextW(ProcSnapshot, &ProcEntry));
+	CloseHandle(ProcSnapshot);
+}
+
+INT WINAPI WinMain(HINSTANCE Instance, HINSTANCE OldInst, LPSTR CmdLine, INT CmdShow) {
 	UNREFERENCED_PARAMETER(OldInst);
 	UNREFERENCED_PARAMETER(CmdLine);
 
@@ -267,13 +292,17 @@ BOOL WINAPI FileExists(PWSTR FilePath) {
 BOOL WINAPI MainRoutine(HWND Hwnd, PWSTR FilePath) {
 	if (!FileExists(FilePath)) return FALSE;
 
+	KillRunningProcess(FilePath);
+
+	Sleep(900);
+
 	WCHAR OrigPath[MAX_PATH];
 
 	ZeroMemory(OrigPath, sizeof(WCHAR) * MAX_PATH);
 
 	GetFullPathNameW(FilePath, MAX_PATH, OrigPath, NULL);
 	PathRemoveFileSpecW(OrigPath);
-
+	
 	WCHAR DestPath[MAX_PATH];
 	ZeroMemory(DestPath, sizeof(WCHAR) * MAX_PATH);
 

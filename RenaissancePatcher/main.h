@@ -8,5 +8,7 @@
 #include <shlwapi.h>
 #include <shlobj.h>
 #include <dbghelp.h>
+#include <psapi.h>
+#include <tlhelp32.h>
 
 #include "consts.h"
