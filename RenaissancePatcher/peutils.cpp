@@ -25,9 +25,9 @@ BOOL WINAPI AddImport(PeHeaders *PeHdr, Metadata *SectionData, PIMAGE_NT_HEADERS
 	CONST DWORD SectionSize = ALIGN(OldImportTableSize + 0x200, PeHdr->Nt32->OptionalHeader.SectionAlignment);
 
 	if (!CreateNewSection(IMPSEC, SectionSize, PeHdr, SectionData, NewNt32, NewSectionTable)) return FALSE;
-
+	
 	NewNt32->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress = NewSectionTable[PeHdr->Nt32->FileHeader.NumberOfSections].VirtualAddress;
-	NewNt32->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size += sizeof(IMAGE_IMPORT_DESCRIPTOR);
+	NewNt32->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size += sizeof(IMAGE_IMPORT_DESCRIPTOR) * 2;
 
 	PIMAGE_IMPORT_DESCRIPTOR NewDescEntry = (PIMAGE_IMPORT_DESCRIPTOR)SectionData[PeHdr->Nt32->FileHeader.NumberOfSections].DataPointer;
 
@@ -43,6 +43,8 @@ BOOL WINAPI AddImport(PeHeaders *PeHdr, Metadata *SectionData, PIMAGE_NT_HEADERS
 	DWORD ImportCount = 0;
 	for(; NewDescEntry->Name; NewDescEntry++) ImportCount++;
 
+	ZeroMemory(NewDescEntry, sizeof(IMAGE_IMPORT_DESCRIPTOR));
+
 	NewDescEntry->Name = PrologueRva;
 	NewDescEntry->OriginalFirstThunk = PrologueRva + strlen(IMPDLL) + strlen(RENAISIMPORT) + 6;
 	NewDescEntry->FirstThunk = PrologueRva + strlen(IMPDLL) + strlen(RENAISIMPORT) + 6;
@@ -53,6 +55,11 @@ BOOL WINAPI AddImport(PeHeaders *PeHdr, Metadata *SectionData, PIMAGE_NT_HEADERS
 
 	CopyMemory(PrologueOffset + strlen(IMPDLL) + strlen(RENAISIMPORT) + 6, &PatchThunk, sizeof(IMAGE_THUNK_DATA32));
 	CopyMemory(PrologueOffset + strlen(IMPDLL) + strlen(RENAISIMPORT) + 6 + sizeof(IMAGE_THUNK_DATA32) + 10, EASTER_EGG, strlen(EASTER_EGG));
+	
+	NewDescEntry++;
+
+	ZeroMemory(NewDescEntry, sizeof(IMAGE_IMPORT_DESCRIPTOR));
+
 	return TRUE;
 }
 
