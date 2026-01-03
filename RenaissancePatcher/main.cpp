@@ -289,7 +289,7 @@ BOOL WINAPI SetRegistryValues(VOID) {
 
 	DWORD FirstTimeTmp = 0;
 
-	PCWSTR DefaultDomain = L"mrim.su",
+	PCWSTR DefaultDomain = L"proto.mrim.su",
 		DefaultAvatarDomain = L"obraz.mrim.su";
 
     RegSetValueExW(Hkey, L"FirstTime", 0, REG_DWORD, (BYTE *)&FirstTimeTmp, sizeof(FirstTimeTmp));
