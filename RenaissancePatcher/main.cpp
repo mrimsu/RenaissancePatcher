@@ -206,8 +206,14 @@ BOOL WINAPI SetRegistryValues(BOOL IsRanFromExtras) {
 		GetWindowTextW(ExtraDialogControls.ServerEditBox, UserServerAddr, MAX_ADDR_LEN);
 		GetWindowTextW(ExtraDialogControls.AvatarServerEditBox, UserAvatarServerAddr, MAX_ADDR_LEN);
 
-		RegSetValueExW(Hkey, L"MrimDomain", 0, REG_SZ, (BYTE*)UserServerAddr, sizeof(WCHAR) * MAX_ADDR_LEN);
-    	RegSetValueExW(Hkey, L"MrimAvatarDomain", 0, REG_SZ, (BYTE*)UserAvatarServerAddr, sizeof(WCHAR) * MAX_ADDR_LEN);
+		UserServerAddr[MAX_ADDR_LEN - 1 ] = '\0';
+		UserAvatarServerAddr[MAX_ADDR_LEN - 1] = '\0';
+
+		size_t ServStringLen = wcslen(UserServerAddr),
+			AvatarServStringLen = wcslen(UserAvatarServerAddr);
+
+		RegSetValueExW(Hkey, L"MrimDomain", 0, REG_SZ, (BYTE*)UserServerAddr, sizeof(WCHAR) * ServStringLen);
+    	RegSetValueExW(Hkey, L"MrimAvatarDomain", 0, REG_SZ, (BYTE*)UserAvatarServerAddr, sizeof(WCHAR) * AvatarServStringLen);
 
 		RegCloseKey(Hkey);
 
@@ -459,8 +465,8 @@ LRESULT CALLBACK ExtrasWindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lPa
 			
 			ExtraDialogControls.SslCheckbox = CreateWindowW(L"BUTTON", L"Включить SSL", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX, 10, 78, 90, 20, Hwnd, (HMENU)SSL_CHECKBOX, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);
 
-			ExtraDialogControls.ServerEditBox = CreateWindowW(L"EDIT", DEFAULT_SERVER, WS_TABSTOP | WS_BORDER | WS_CHILD | WS_VISIBLE | ES_LEFT | ES_MULTILINE | ES_AUTOVSCROLL, 10, 102, 90, 20, Hwnd, (HMENU)SERVER_TEXTBOX, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);
-			ExtraDialogControls.AvatarServerEditBox = CreateWindowW(L"EDIT", DEFAULT_AVATAR_SERVER, WS_TABSTOP | WS_BORDER | WS_CHILD | WS_VISIBLE | ES_LEFT | ES_MULTILINE | ES_AUTOVSCROLL, 10, 125, 90, 20, Hwnd, (HMENU)AVATAR_SERVER_TEXTBOX, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);;
+			ExtraDialogControls.ServerEditBox = CreateWindowW(L"EDIT", DEFAULT_SERVER, WS_TABSTOP | WS_BORDER | WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOVSCROLL, 10, 102, 150, 20, Hwnd, (HMENU)SERVER_TEXTBOX, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);
+			ExtraDialogControls.AvatarServerEditBox = CreateWindowW(L"EDIT", DEFAULT_AVATAR_SERVER, WS_TABSTOP | WS_BORDER | WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOVSCROLL, 10, 125, 150, 20, Hwnd, (HMENU)AVATAR_SERVER_TEXTBOX, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);;
 
 			SendMessage(ApplyButton, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
 			SendMessage(CleanMraButton, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
