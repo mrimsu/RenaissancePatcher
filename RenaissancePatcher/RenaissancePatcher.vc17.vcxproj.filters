@@ -18,7 +18,7 @@
     <ClInclude Include="consts.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="flashpatch.h">
+    <ClInclude Include="bytepatch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="main.h">
@@ -40,7 +40,7 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="flashpatch.cpp">
+    <ClCompile Include="bytepatch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">

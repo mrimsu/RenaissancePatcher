@@ -3,7 +3,7 @@ project("RenaissancePatcher" CXX)
 
 set (CMAKE_CXX_STANDARD 11)
 
-add_executable(${PROJECT_NAME} WIN32 main.cpp peutils.cpp restools.cpp flashpatch.cpp)
+add_executable(${PROJECT_NAME} WIN32 main.cpp peutils.cpp restools.cpp bytepatch.cpp)
 
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     message(FATAL_ERROR "This should be build targetting a 32 bit system.")

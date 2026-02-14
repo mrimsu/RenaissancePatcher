@@ -93,7 +93,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="consts.h" />
-    <ClInclude Include="flashpatch.h" />
+    <ClInclude Include="bytespatch.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="peutils.h" />
     <ClInclude Include="resources.h" />
@@ -103,7 +103,7 @@
     <ResourceCompile Include="res.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="flashpatch.cpp" />
+    <ClCompile Include="bytepatch.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="peutils.cpp" />
     <ClCompile Include="restools.cpp" />

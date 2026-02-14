@@ -1,8 +1,11 @@
-﻿#include "flashpatch.h"
+﻿#include "bytepatch.h"
 
 static CONST BYTE FlashConst[16] = {110, 219, 124, 210, 109, 174, 207, 17, 150, 184, 68, 69, 83, 84, 0, 0},
     PatchedFlashConst[16] = {146, 63, 64, 234, 153, 13, 10, 70, 176, 39, 220, 101, 108, 237, 23, 81};
 
+static CONST BYTE AttribPattern[6] = {0x24, 0xC1, 0xE8, 0x1F, 0xF7, 0xD0},
+    AttribPatchedBytes[3] = {0x31, 0xC0, 0x40};
+    
 BOOL WINAPI RegisterFlashClass(VOID) {
     HKEY Hkey;
     RegCreateKeyW(HKEY_CLASSES_ROOT, L"CLSID\\{EA403F92-0D99-460A-B027-DC656CED1751}\\InprocServer32", &Hkey);
@@ -18,7 +21,7 @@ BOOL WINAPI RegisterFlashClass(VOID) {
     return TRUE;
 }
 
-BOOL WINAPI PatchFlash(PWSTR Input) {
+BOOL WINAPI PatchBytes(PWSTR Input) {
     HANDLE MagentPe = CreateFileW(Input, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (!MagentPe) return FALSE;
@@ -41,6 +44,10 @@ BOOL WINAPI PatchFlash(PWSTR Input) {
     for (DWORD a = 0; a + 16 < PeSize; a++) {
         if (memcmp(&MapBuffer[a], FlashConst, 16) == 0) {
             memcpy(&MapBuffer[a], PatchedFlashConst, 16);
+        }
+
+        if (memcmp(&MapBuffer[a], AttribPattern, 6) == 0) {
+            memcpy(&MapBuffer[a + 6], AttribPatchedBytes, 3);
         }
     }
 

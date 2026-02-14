@@ -1,6 +1,6 @@
 ﻿#include "main.h"
 #include "peutils.h"
-#include "flashpatch.h"
+#include "bytepatch.h"
 #include "restools.h"
 #include "resources.h"
 
@@ -309,7 +309,7 @@ BOOL WINAPI MainRoutine(HWND Hwnd, PWSTR FilePath) {
 	PWSTR TmpFilePath = wcscat(OrigPath, L"\\magent.exe.tmp");
 
 	if (PatchPE(FilePath, TmpFilePath)) {
-		BOOL FlashStatus = PatchFlash(TmpFilePath);
+		BOOL FlashStatus = PatchBytes(TmpFilePath);
 							
 		DeleteFileW(FilePath);
 		MoveFileW(TmpFilePath, FilePath);

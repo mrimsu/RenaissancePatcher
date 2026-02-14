@@ -10,15 +10,15 @@
 #define DEFAULT_DOMAIN "proto.mrim.su"
 #define DEFAULT_AVATAR_DOMAIN "obraz.mrim.su"
 
-char* MrimProtocolDomain;
-char* MrimAvatarsDomain;
+char *MrimProtocolDomain = NULL;
+char *MrimAvatarsDomain = NULL;
 
 typedef struct hostent *(WSAAPI *_gethostbyname) (const char* name);
 
 _gethostbyname OriginalGethostbyname = NULL;
 
 // вот здесь мы делаем тёмные делишки 🔥
-struct hostent * WSAAPI hijackedgethostbyname(const char* name) {
+struct hostent * WSAAPI DetourGethostbyname(const char* name) {
     if (strcmp(name, "mrim.mail.ru") == 0) 
         return OriginalGethostbyname(MrimProtocolDomain);
 
@@ -28,22 +28,20 @@ struct hostent * WSAAPI hijackedgethostbyname(const char* name) {
     return OriginalGethostbyname(name);
 }
 
-char* WideToChar(const wchar_t* wideStr) {
-    if (!wideStr) return NULL;
+PSTR WideToChar(CONST WCHAR *WideStr) {
+    if (!WideStr) return NULL;
 
-    int size = WideCharToMultiByte(CP_UTF8, 0, wideStr, -1, NULL, 0, NULL, NULL);
+    INT size = WideCharToMultiByte(CP_UTF8, 0, WideStr, -1, NULL, 0, NULL, NULL);
     if (size == 0) return NULL;
 
-    char *buffer = (char *)GlobalAlloc(GMEM_ZEROINIT, size);
-    WideCharToMultiByte(CP_UTF8, 0, wideStr, -1, buffer, size, NULL, NULL);
-    return buffer;
+    PSTR Buffer = (PSTR)GlobalAlloc(GMEM_ZEROINIT, size);
+    WideCharToMultiByte(CP_UTF8, 0, WideStr, -1, Buffer, size, NULL, NULL);
+    return Buffer;
 }
 
-extern "C" __declspec(dllexport) DWORD __cdecl mainHakVzlom(); 
+extern "C" __declspec(dllexport) DWORD __cdecl MainHakVzlom(); 
 
-PVOID EnableTrampoline(PVOID Original, PVOID Detour) {
-    CONST SIZE_T Length = 5;
-
+PVOID EnableTrampoline(PVOID Original, PVOID Detour, SIZE_T Length) {
     PVOID OldFuncPointer = VirtualAlloc(NULL, Length + 5, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 
     CopyMemory(OldFuncPointer, Original, Length);
@@ -68,9 +66,9 @@ PVOID EnableTrampoline(PVOID Original, PVOID Detour) {
 }
 
 // я эту функцию специально так назвал, я не нуп
-DWORD __cdecl mainHakVzlom(VOID) {
+DWORD __cdecl MainHakVzlom(VOID) {
     HKEY hKey = NULL;
-    const wchar_t* regPatch = L"SOFTWARE\\Renaissance";
+    PCWSTR regPatch = L"SOFTWARE\\Renaissance";
 		// получаем доступ к реестру (при отсутствии ключа - создаём его) 
     if (RegCreateKeyW(HKEY_CURRENT_USER, regPatch, &hKey) != ERROR_SUCCESS) {
         MessageBoxW(NULL, L"Не удалось получить доступ к Реестру", L"Критическая ошибка Renaissance Patch", MB_OK | MB_ICONERROR);
@@ -79,57 +77,57 @@ DWORD __cdecl mainHakVzlom(VOID) {
     else {
         // буфер для домена протокола
         DWORD dwType = REG_SZ;
-        wchar_t buf[255] = { 0 };
-        DWORD dwBufSize = sizeof(buf);
+        WCHAR Buf[255] = { 0 };
+        DWORD dwBufSize = sizeof(Buf);
         // сначала грузим настройки
         // тут раньше был смешной баг, из-за которого патчер не работал на Windows XP
-        if (RegQueryValueExW(hKey, L"MrimDomain", 0, &dwType, (LPBYTE)buf, &dwBufSize) == ERROR_SUCCESS)
+        if (RegQueryValueExW(hKey, L"MrimDomain", 0, &dwType, (LPBYTE)Buf, &dwBufSize) == ERROR_SUCCESS)
         {
             // совершенно не безопасно, но функция в if и так защищает от переполнения буфера (выдаст ошибку, если буфер милипиздрический)
-            MrimProtocolDomain = WideToChar(buf);
+            MrimProtocolDomain = WideToChar(Buf);
         }
         else {
             // в ином случае грузим дефолты ну и делаем ДУДОС ЭЛЬДОРАДО
-            MrimProtocolDomain = (char*)DEFAULT_DOMAIN;
+            MrimProtocolDomain = (PSTR) DEFAULT_DOMAIN;
 
             // выставляем дефолт
             DWORD FirstTimeTmp = 0;
-            RegSetValueExW(hKey, L"FirstTime", 0, REG_DWORD, (BYTE *)&FirstTimeTmp, sizeof(FirstTimeTmp));
-            RegSetValueExA(hKey, "MrimDomain", 0, REG_SZ, (BYTE*)DEFAULT_DOMAIN, sizeof(DEFAULT_DOMAIN));
-            RegSetValueExA(hKey, "MrimAvatarDomain", 0, REG_SZ, (BYTE*)DEFAULT_AVATAR_DOMAIN, sizeof(DEFAULT_AVATAR_DOMAIN)+1);
-            MrimProtocolDomain = (char*)DEFAULT_DOMAIN;
-            MrimAvatarsDomain = (char*)DEFAULT_AVATAR_DOMAIN;
+            RegSetValueExW(hKey, L"FirstTime", 0, REG_DWORD, (PBYTE)&FirstTimeTmp, sizeof(FirstTimeTmp));
+            RegSetValueExA(hKey, "MrimDomain", 0, REG_SZ, (PBYTE)DEFAULT_DOMAIN, sizeof(DEFAULT_DOMAIN));
+            RegSetValueExA(hKey, "MrimAvatarDomain", 0, REG_SZ, (PBYTE)DEFAULT_AVATAR_DOMAIN, sizeof(DEFAULT_AVATAR_DOMAIN)+1);
+            MrimProtocolDomain = (PSTR)DEFAULT_DOMAIN;
+            MrimAvatarsDomain = (PSTR)DEFAULT_AVATAR_DOMAIN;
             // юзера уведомляем
             MessageBoxW(NULL, L"Похоже, вы установили патч ручным способом. Отредактируйте параметры на соответствующие вашим в Редакторе Реестра по адресу HKCU/SOFTWARE/Renaissance", L"Renaissance Patch", MB_OK | MB_ICONINFORMATION);
         }
-        memset(buf, 0, sizeof(buf));
+
+        memset(Buf, 0, sizeof(Buf));
 
         // буфер для домена авок
-        wchar_t bufAva[255] = { 0 };
-        DWORD dwAvaBufSize = sizeof(buf);
+        WCHAR bufAva[255] = { 0 };
+        DWORD dwAvaBufSize = sizeof(Buf);
         if (RegQueryValueExW(hKey, L"MrimAvatarDomain", 0, &dwType, (LPBYTE)bufAva, &dwAvaBufSize) == ERROR_SUCCESS)
         {
             MrimAvatarsDomain = WideToChar(bufAva);
         }
         else {
-            MrimAvatarsDomain = (char*)DEFAULT_AVATAR_DOMAIN;
+            MrimAvatarsDomain = (PSTR)DEFAULT_AVATAR_DOMAIN;
             }
         // чистим буфер от гавна
-        memset(buf, 0, sizeof(buf));
+        memset(Buf, 0, sizeof(Buf));
 
         // проверяем на первый запуск
         DWORD FirstTime = 0;
         DWORD FTType = REG_DWORD;
         DWORD FTLen = (DWORD)sizeof(FirstTime);
-        if (RegQueryValueExW(hKey, L"FirstTime", 0, &FTType, (BYTE*)&FirstTime, &FTLen) == ERROR_SUCCESS)
+        if (RegQueryValueExW(hKey, L"FirstTime", 0, &FTType, (PBYTE)&FirstTime, &FTLen) == ERROR_SUCCESS)
         {
             if (FirstTime == 1) {
                 FirstTime = 0;
-                RegSetValueExW(hKey, L"FirstTime", 0, REG_DWORD, (BYTE *)&FirstTime, sizeof(FirstTime));
+                RegSetValueExW(hKey, L"FirstTime", 0, REG_DWORD, (PBYTE)&FirstTime, sizeof(FirstTime));
                 MessageBoxW(NULL, L"Если вы видите это сообщение - поздравляем, патч сработал!\n\nНастроить его можно с помощью Renaissance Patcher.", L"Renaissance Patch", MB_OK | MB_ICONINFORMATION);
             }
         }
-
         // вычищаем всё нахуй, чтобы не возникало утечек памяти
         RegCloseKey(hKey);
     }
@@ -137,7 +135,7 @@ DWORD __cdecl mainHakVzlom(VOID) {
 }
 
 //fool-proof 
-BOOL CheckWinSock(VOID) {
+BOOL WINAPI CheckWinSock(VOID) {
     HANDLE ProcSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetCurrentProcessId());
     MODULEENTRY32W ModuleEntry;
     ModuleEntry.dwSize = sizeof(MODULEENTRY32);
@@ -159,19 +157,19 @@ BOOL CheckWinSock(VOID) {
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule,
-                       DWORD  ul_reason_for_call,
-                       LPVOID lpReserved
-                     )
+                        DWORD ul_reason_for_call,
+                        LPVOID lpReserved
+                    )
     {
         UNREFERENCED_PARAMETER(hModule);
         UNREFERENCED_PARAMETER(lpReserved);
+
         switch (ul_reason_for_call) {
 	        case DLL_PROCESS_ATTACH: {
                 if (!CheckWinSock()) {
                     MessageBoxW(NULL, L"Данная программа не загрузила WinSock2. Вероятно был пропатчен не тот exe файл", L"Ошибка", MB_OK | MB_ICONERROR);
                     ExitProcess(1);
                 }
-
                 HMODULE WinSock2dll = GetModuleHandleW(L"ws2_32.dll");
 
                 FARPROC GetHostbynameOffset = GetProcAddress(WinSock2dll, "gethostbyname");
@@ -181,9 +179,9 @@ BOOL APIENTRY DllMain(HMODULE hModule,
                     ExitProcess(1);
                 }
 
-                OriginalGethostbyname = (_gethostbyname) EnableTrampoline((PVOID)GetHostbynameOffset, (PVOID)hijackedgethostbyname);
+                OriginalGethostbyname = (_gethostbyname) EnableTrampoline((PVOID)GetHostbynameOffset, (PVOID)DetourGethostbyname, 5);
 
-                mainHakVzlom();
+                MainHakVzlom();
                 break;
 	        }
             case DLL_THREAD_ATTACH:
