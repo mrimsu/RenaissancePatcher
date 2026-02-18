@@ -5,17 +5,25 @@
 #include <windows.h>
 #include <psapi.h>
 #include <tlhelp32.h>
+#include <MsHTML.h>
+#include <Exdisp.h>
+#include <ExDispid.h>
+#include <stdio.h>
+#include <shellapi.h>
 
 // дефайны для дефолтных значений
 #define DEFAULT_DOMAIN "proto.mrim.su"
 #define DEFAULT_AVATAR_DOMAIN "obraz.mrim.su"
+#define WEBSITE_URL (PWSTR)L"https://mrim.su"
 
-char *MrimProtocolDomain = NULL;
-char *MrimAvatarsDomain = NULL;
+PSTR MrimProtocolDomain = NULL;
+PSTR MrimAvatarsDomain = NULL;
 
 typedef struct hostent *(WSAAPI *_gethostbyname) (const char* name);
+typedef HWND (WINAPI *_CreateWindowExW) (DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam);
 
 _gethostbyname OriginalGethostbyname = NULL;
+_CreateWindowExW OriginalCreateWindowExW = NULL;
 
 // вот здесь мы делаем тёмные делишки 🔥
 struct hostent * WSAAPI DetourGethostbyname(const char* name) {
@@ -28,7 +36,17 @@ struct hostent * WSAAPI DetourGethostbyname(const char* name) {
     return OriginalGethostbyname(name);
 }
 
-PSTR WideToChar(CONST WCHAR *WideStr) {
+HWND WINAPI DetourCreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam) {
+    if (lpClassName != NULL) {
+        if (_wcsicmp(lpWindowName, L"IE2") == 0) {
+            ShellExecuteW(NULL, L"open", WEBSITE_URL, NULL, NULL, SW_SHOW);
+            return NULL;
+        }
+    }
+    return OriginalCreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+}
+
+PSTR WideToChar(PCWSTR WideStr) {
     if (!WideStr) return NULL;
 
     INT size = WideCharToMultiByte(CP_UTF8, 0, WideStr, -1, NULL, 0, NULL, NULL);
@@ -41,7 +59,7 @@ PSTR WideToChar(CONST WCHAR *WideStr) {
 
 extern "C" __declspec(dllexport) DWORD __cdecl MainHakVzlom(); 
 
-PVOID EnableTrampoline(PVOID Original, PVOID Detour, SIZE_T Length) {
+PVOID WINAPI EnableTrampoline(PVOID Original, PVOID Detour, SIZE_T Length) {
     PVOID OldFuncPointer = VirtualAlloc(NULL, Length + 5, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 
     CopyMemory(OldFuncPointer, Original, Length);
@@ -74,6 +92,7 @@ DWORD __cdecl MainHakVzlom(VOID) {
         MessageBoxW(NULL, L"Не удалось получить доступ к Реестру", L"Критическая ошибка Renaissance Patch", MB_OK | MB_ICONERROR);
         RegCloseKey(hKey);
     }
+
     else {
         // буфер для домена протокола
         DWORD dwType = REG_SZ;
@@ -106,13 +125,13 @@ DWORD __cdecl MainHakVzlom(VOID) {
         // буфер для домена авок
         WCHAR bufAva[255] = { 0 };
         DWORD dwAvaBufSize = sizeof(Buf);
-        if (RegQueryValueExW(hKey, L"MrimAvatarDomain", 0, &dwType, (LPBYTE)bufAva, &dwAvaBufSize) == ERROR_SUCCESS)
-        {
+        if (RegQueryValueExW(hKey, L"MrimAvatarDomain", 0, &dwType, (LPBYTE)bufAva, &dwAvaBufSize) == ERROR_SUCCESS) {
             MrimAvatarsDomain = WideToChar(bufAva);
         }
+
         else {
             MrimAvatarsDomain = (PSTR)DEFAULT_AVATAR_DOMAIN;
-            }
+        }
         // чистим буфер от гавна
         memset(Buf, 0, sizeof(Buf));
 
@@ -166,13 +185,19 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 
         switch (ul_reason_for_call) {
 	        case DLL_PROCESS_ATTACH: {
+                AllocConsole();
+                freopen("CONOUT$", "w", stdout); 
+
                 if (!CheckWinSock()) {
                     MessageBoxW(NULL, L"Данная программа не загрузила WinSock2. Вероятно был пропатчен не тот exe файл", L"Ошибка", MB_OK | MB_ICONERROR);
                     ExitProcess(1);
                 }
-                HMODULE WinSock2dll = GetModuleHandleW(L"ws2_32.dll");
 
-                FARPROC GetHostbynameOffset = GetProcAddress(WinSock2dll, "gethostbyname");
+                HMODULE WinSock2dll = GetModuleHandleW(L"ws2_32.dll"),
+                    User32Dll = GetModuleHandleW(L"User32.dll");
+
+                FARPROC GetHostbynameOffset = GetProcAddress(WinSock2dll, "gethostbyname"),
+                    CreateWindowExWOffset = GetProcAddress(User32Dll, "CreateWindowExW");
 
                 if (!GetHostbynameOffset) {
                     MessageBoxW(NULL, L"В этой имплементации WinSock2 отсутствует функция gethostbyname", L"Ошибка", MB_OK | MB_ICONERROR);
@@ -180,6 +205,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
                 }
 
                 OriginalGethostbyname = (_gethostbyname) EnableTrampoline((PVOID)GetHostbynameOffset, (PVOID)DetourGethostbyname, 5);
+                OriginalCreateWindowExW = (_CreateWindowExW) EnableTrampoline((PVOID)CreateWindowExWOffset, (PVOID)DetourCreateWindowExW, 5);
 
                 MainHakVzlom();
                 break;
@@ -191,4 +217,3 @@ BOOL APIENTRY DllMain(HMODULE hModule,
         }
         return TRUE;
 }
-
