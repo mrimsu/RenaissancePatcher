@@ -8,7 +8,6 @@
 #include <MsHTML.h>
 #include <Exdisp.h>
 #include <ExDispid.h>
-#include <stdio.h>
 #include <shellapi.h>
 
 // дефайны для дефолтных значений
@@ -185,8 +184,6 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 
         switch (ul_reason_for_call) {
 	        case DLL_PROCESS_ATTACH: {
-                AllocConsole();
-                freopen("CONOUT$", "w", stdout); 
 
                 if (!CheckWinSock()) {
                     MessageBoxW(NULL, L"Данная программа не загрузила WinSock2. Вероятно был пропатчен не тот exe файл", L"Ошибка", MB_OK | MB_ICONERROR);
