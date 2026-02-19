@@ -204,9 +204,9 @@ BOOL APIENTRY DllMain(HMODULE hModule,
                     MessageBoxW(NULL, L"В этой имплементации WinSock2 отсутствует функция gethostbyname", L"Ошибка", MB_OK | MB_ICONERROR);
                     ExitProcess(1);
                 }
-
+                (void) ShowWindowOffset;
                 OriginalGethostbyname = (_gethostbyname)EnableTrampoline((PVOID)GetHostbynameOffset, (PVOID)DetourGethostbyname, 5);
-                OriginalShowWindow = (_ShowWindow)EnableTrampoline((PVOID)ShowWindowOffset, (PVOID)DetourShowWindow, 7);
+                OriginalShowWindow = (_ShowWindow)EnableTrampoline((PVOID)ShowWindowOffset, (PVOID)DetourShowWindow, 5);
 
                 MainHakVzlom();
                 break;
