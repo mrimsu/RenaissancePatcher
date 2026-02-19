@@ -13,16 +13,16 @@
 // дефайны для дефолтных значений
 #define DEFAULT_DOMAIN "proto.mrim.su"
 #define DEFAULT_AVATAR_DOMAIN "obraz.mrim.su"
-#define WEBSITE_URL (PWSTR)L"https://mrim.su"
+#define WEBSITE_REGISTER_URL (PWSTR)L"https://mrim.su/reg"
 
 PSTR MrimProtocolDomain = NULL;
 PSTR MrimAvatarsDomain = NULL;
 
 typedef struct hostent *(WSAAPI *_gethostbyname) (const char* name);
-typedef HWND (WINAPI *_CreateWindowExW) (DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam);
+typedef BOOL (WINAPI *_ShowWindow) (HWND hWnd, int nCmdShow);
 
 _gethostbyname OriginalGethostbyname = NULL;
-_CreateWindowExW OriginalCreateWindowExW = NULL;
+_ShowWindow OriginalShowWindow = NULL;
 
 // вот здесь мы делаем тёмные делишки 🔥
 struct hostent * WSAAPI DetourGethostbyname(const char* name) {
@@ -35,14 +35,18 @@ struct hostent * WSAAPI DetourGethostbyname(const char* name) {
     return OriginalGethostbyname(name);
 }
 
-HWND WINAPI DetourCreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam) {
-    if (lpClassName != NULL) {
-        if (_wcsicmp(lpWindowName, L"IE2") == 0) {
-            ShellExecuteW(NULL, L"open", WEBSITE_URL, NULL, NULL, SW_SHOW);
-            return NULL;
-        }
+BOOL WINAPI DetourShowWindow(HWND hWnd, int nCmdShow) {
+    WCHAR ClassName[256];
+
+    GetClassNameW(hWnd, ClassName, 256);
+
+    if (_wcsicmp(ClassName, L"MAgentIE2") == 0) {
+        DestroyWindow(hWnd);
+        ShellExecuteW(NULL, L"open", WEBSITE_REGISTER_URL, NULL, NULL, SW_SHOW);
+        return FALSE;
     }
-    return OriginalCreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+
+    return OriginalShowWindow(hWnd, nCmdShow);
 }
 
 PSTR WideToChar(PCWSTR WideStr) {
@@ -194,15 +198,15 @@ BOOL APIENTRY DllMain(HMODULE hModule,
                     User32Dll = GetModuleHandleW(L"User32.dll");
 
                 FARPROC GetHostbynameOffset = GetProcAddress(WinSock2dll, "gethostbyname"),
-                    CreateWindowExWOffset = GetProcAddress(User32Dll, "CreateWindowExW");
+                    ShowWindowOffset = GetProcAddress(User32Dll, "ShowWindow");
 
                 if (!GetHostbynameOffset) {
                     MessageBoxW(NULL, L"В этой имплементации WinSock2 отсутствует функция gethostbyname", L"Ошибка", MB_OK | MB_ICONERROR);
                     ExitProcess(1);
                 }
 
-                OriginalGethostbyname = (_gethostbyname) EnableTrampoline((PVOID)GetHostbynameOffset, (PVOID)DetourGethostbyname, 5);
-                OriginalCreateWindowExW = (_CreateWindowExW) EnableTrampoline((PVOID)CreateWindowExWOffset, (PVOID)DetourCreateWindowExW, 5);
+                OriginalGethostbyname = (_gethostbyname)EnableTrampoline((PVOID)GetHostbynameOffset, (PVOID)DetourGethostbyname, 5);
+                OriginalShowWindow = (_ShowWindow)EnableTrampoline((PVOID)ShowWindowOffset, (PVOID)DetourShowWindow, 7);
 
                 MainHakVzlom();
                 break;
