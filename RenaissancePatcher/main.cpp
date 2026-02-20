@@ -46,7 +46,7 @@ INT WINAPI WinMain(HINSTANCE Instance, HINSTANCE OldInst, LPSTR CmdLine, INT Cmd
 		if (!MainRoutine(NULL, Argv[1])) return 1;
 		return 0;
 	}
-
+	
     WNDCLASSW MainWndClass;
 	ZeroMemory(&MainWndClass, sizeof(WNDCLASSW));
 
