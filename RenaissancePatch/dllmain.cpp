@@ -5,21 +5,18 @@
 #include <windows.h>
 #include <psapi.h>
 #include <tlhelp32.h>
-#include <MsHTML.h>
-#include <Exdisp.h>
-#include <ExDispid.h>
 #include <shellapi.h>
 
 // дефайны для дефолтных значений
 #define DEFAULT_DOMAIN "proto.mrim.su"
 #define DEFAULT_AVATAR_DOMAIN "obraz.mrim.su"
-#define WEBSITE_REGISTER_URL (PWSTR)L"https://mrim.su/reg"
+#define WEBSITE_REGISTER_URL (PWSTR)L"http://mrim.su/reg"
 
 PSTR MrimProtocolDomain = NULL;
 PSTR MrimAvatarsDomain = NULL;
 
 typedef struct hostent *(WSAAPI *_gethostbyname) (const char* name);
-typedef BOOL (WINAPI *_ShowWindow) (HWND hWnd, int nCmdShow);
+typedef WINBOOL (WINAPI *_ShowWindow) (HWND hWnd, int nCmdShow);
 
 _gethostbyname OriginalGethostbyname = NULL;
 _ShowWindow OriginalShowWindow = NULL;
@@ -36,17 +33,17 @@ struct hostent * WSAAPI DetourGethostbyname(const char* name) {
 }
 
 BOOL WINAPI DetourShowWindow(HWND hWnd, int nCmdShow) {
+    
     WCHAR ClassName[256];
+    if (GetClassNameW(hWnd, ClassName, 256)) {
 
-    GetClassNameW(hWnd, ClassName, 256);
-
-    if (_wcsicmp(ClassName, L"MAgentIE2") == 0) {
-        DestroyWindow(hWnd);
-        ShellExecuteW(NULL, L"open", WEBSITE_REGISTER_URL, NULL, NULL, SW_SHOW);
-        return FALSE;
+        if (_wcsicmp(ClassName, L"MAgentIE2") == 0) {
+            DestroyWindow(hWnd);
+            ShellExecuteW(NULL, L"open", WEBSITE_REGISTER_URL, NULL, NULL, SW_SHOW);
+            return FALSE;
+        }
     }
-
-    return OriginalShowWindow(hWnd, nCmdShow);
+    return ShowWindowAsync(hWnd, nCmdShow); //This is a temporary workaround until I get back to updating the patcher. I'll grab a debugger and figure out why it fails to run on different systems using the original function pointer
 }
 
 PSTR WideToChar(PCWSTR WideStr) {
@@ -206,7 +203,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
                 }
                 (void) ShowWindowOffset;
                 OriginalGethostbyname = (_gethostbyname)EnableTrampoline((PVOID)GetHostbynameOffset, (PVOID)DetourGethostbyname, 5);
-                OriginalShowWindow = (_ShowWindow)EnableTrampoline((PVOID)ShowWindowOffset, (PVOID)DetourShowWindow, 5);
+                OriginalShowWindow = (_ShowWindow)EnableTrampoline((PVOID)ShowWindowOffset, (PVOID)DetourShowWindow, 3);
 
                 MainHakVzlom();
                 break;

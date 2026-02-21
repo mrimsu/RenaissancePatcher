@@ -246,6 +246,12 @@ BOOL WINAPI SetRegistryValues(BOOL IsRanFromExtras) {
 
 	RegCloseKey(Hkey);
 
+	RegCreateKeyW(HKEY_CURRENT_USER, L"Software\\Mail.ru\\Agent", &Hkey);
+	PCWSTR SslValue = L"deny"; 
+
+	RegSetValueExW(Hkey, L"ssl", 0, REG_SZ, (PBYTE)SslValue, wcslen(SslValue) * sizeof(WCHAR));
+    RegCloseKey(Hkey);
+
     return TRUE;
 }
 
