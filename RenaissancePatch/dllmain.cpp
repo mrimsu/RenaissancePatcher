@@ -203,7 +203,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
                 }
                 (void) ShowWindowOffset;
                 OriginalGethostbyname = (_gethostbyname)EnableTrampoline((PVOID)GetHostbynameOffset, (PVOID)DetourGethostbyname, 5);
-                OriginalShowWindow = (_ShowWindow)EnableTrampoline((PVOID)ShowWindowOffset, (PVOID)DetourShowWindow, 3);
+                OriginalShowWindow = (_ShowWindow)EnableTrampoline((PVOID)ShowWindowOffset, (PVOID)DetourShowWindow, 5);
 
                 MainHakVzlom();
                 break;
