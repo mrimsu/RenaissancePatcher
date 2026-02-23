@@ -16,7 +16,7 @@ PSTR MrimProtocolDomain = NULL;
 PSTR MrimAvatarsDomain = NULL;
 
 typedef struct hostent *(WSAAPI *_gethostbyname) (const char* name);
-typedef WINBOOL (WINAPI *_ShowWindow) (HWND hWnd, int nCmdShow);
+typedef BOOL (WINAPI *_ShowWindow) (HWND hWnd, int nCmdShow);
 
 _gethostbyname OriginalGethostbyname = NULL;
 _ShowWindow OriginalShowWindow = NULL;
@@ -46,7 +46,7 @@ BOOL WINAPI DetourShowWindow(HWND hWnd, int nCmdShow) {
     return ShowWindowAsync(hWnd, nCmdShow); //This is a temporary workaround until I get back to updating the patcher. I'll grab a debugger and figure out why it fails to run on different systems using the original function pointer
 }
 
-PSTR WideToChar(PCWSTR WideStr) {
+PSTR WINAPI WideToChar(PCWSTR WideStr) {
     if (!WideStr) return NULL;
 
     INT size = WideCharToMultiByte(CP_UTF8, 0, WideStr, -1, NULL, 0, NULL, NULL);

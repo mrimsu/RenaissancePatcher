@@ -178,7 +178,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\flashpatch.h"
+				RelativePath=".\bytepatch.h"
 				>
 			</File>
 			<File
@@ -214,7 +214,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\flashpatch.cpp"
+				RelativePath=".\bytepatch.cpp"
 				>
 			</File>
 			<File
