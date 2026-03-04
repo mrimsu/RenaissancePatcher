@@ -7,7 +7,7 @@
 #include <tlhelp32.h>
 #include <shellapi.h>
 #include <wininet.h>
-
+//https://weather.agent.mail.ru
 // дефайны для дефолтных значений
 #define DEFAULT_DOMAIN "proto.mrim.su"
 #define DEFAULT_AVATAR_DOMAIN "obraz.mrim.su"
@@ -35,6 +35,9 @@ struct hostent * WSAAPI DetourGethostbyname(const char* name) {
         return OriginalGethostbyname(MrimProtocolDomain);
 
     if (strcmp(name, "obraz.foto.mail.ru") == 0)
+        return OriginalGethostbyname(MrimAvatarsDomain);
+
+    if (strcmp(name, "pogoda.mail.ru") == 0)
         return OriginalGethostbyname(MrimAvatarsDomain);
 
     return OriginalGethostbyname(name);
