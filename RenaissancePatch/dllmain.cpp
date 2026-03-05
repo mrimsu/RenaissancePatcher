@@ -7,8 +7,7 @@
 #include <tlhelp32.h>
 #include <shellapi.h>
 #include <wininet.h>
-//https://weather.agent.mail.ru
-//L"http://r.mail.ru/cln2276/weather.mail.ru"
+
 // дефайны для дефолтных значений
 #define DEFAULT_DOMAIN "proto.mrim.su"
 #define DEFAULT_AVATAR_DOMAIN "obraz.mrim.su"
@@ -19,16 +18,9 @@ PSTR MrimAvatarsDomain = NULL;
 
 typedef struct hostent *(WSAAPI *_gethostbyname) (const char *name);
 typedef BOOL (WINAPI *_ShowWindow) (HWND hWnd, int nCmdShow);
-typedef BOOL (WINAPI *_InternetCreateUrlW) (
-    LPURL_COMPONENTSW lpUrlComponents,
-    DWORD dwFlags,
-    LPWSTR lpszUrl,
-    LPDWORD lpdwUrlLength
-);
 
 _gethostbyname OriginalGethostbyname = NULL;
 _ShowWindow OriginalShowWindow = NULL;
-_InternetCreateUrlW OriginalInternetCreateUrlW = NULL;
 
 // вот здесь мы делаем тёмные делишки 🔥
 struct hostent * WSAAPI DetourGethostbyname(const char* name) {
@@ -60,23 +52,7 @@ BOOL WINAPI DetourShowWindow(HWND hWnd, int nCmdShow) {
             return FALSE;
         }
     }
-    return ShowWindowAsync(hWnd, nCmdShow);
-}
-
-BOOL WINAPI DetourInternetCreateUrlW(
-    LPURL_COMPONENTSW lpUrlComponents,
-    DWORD dwFlags,
-    LPWSTR lpszUrl,
-    LPDWORD lpdwUrlLength
-) {
-    if (_wcsicmp(lpUrlComponents->lpszHostName, L"agent.mail.ru") == 0) {
-        URL_COMPONENTSW UrlComponentsDup;
-        memcpy(&UrlComponentsDup, lpUrlComponents, sizeof(URL_COMPONENTSW));
-        UrlComponentsDup.lpszHostName = (LPWSTR)L"obraz.mrim.su";
-        UrlComponentsDup.dwHostNameLength = wcslen(L"obraz.mrim.su");
-        return OriginalInternetCreateUrlW(&UrlComponentsDup, dwFlags, lpszUrl, lpdwUrlLength);
-    }
-    return OriginalInternetCreateUrlW(lpUrlComponents, dwFlags, lpszUrl, lpdwUrlLength);
+    return OriginalShowWindow(hWnd, nCmdShow);
 }
 
 PSTR WINAPI WideToChar(PCWSTR WideStr) {
@@ -224,22 +200,8 @@ BOOL APIENTRY DllMain(HMODULE hModule,
                     ExitProcess(1);
                 }
 
-                HMODULE WinSock2dll = GetModuleHandleW(L"ws2_32.dll"),
-                    User32Dll = GetModuleHandleW(L"User32.dll"),
-                    WininetDll = GetModuleHandleW(L"wininet.dll");
-
-                FARPROC GetHostbynameOffset = GetProcAddress(WinSock2dll, "gethostbyname"),
-                    ShowWindowOffset = GetProcAddress(User32Dll, "ShowWindow"),
-                    InternetCreateUrlWOffset = GetProcAddress(WininetDll, "InternetCreateUrlW");
-
-                if (!GetHostbynameOffset) {
-                    MessageBoxW(NULL, L"В этой имплементации WinSock2 отсутствует функция gethostbyname", L"Ошибка", MB_OK | MB_ICONERROR);
-                    ExitProcess(1);
-                }
-
-                OriginalGethostbyname = (_gethostbyname)EnableTrampoline((PVOID)GetHostbynameOffset, (PVOID)DetourGethostbyname, 5);
-                OriginalShowWindow = (_ShowWindow)EnableTrampoline((PVOID)ShowWindowOffset, (PVOID)DetourShowWindow, 5);
-                OriginalInternetCreateUrlW = (_InternetCreateUrlW)EnableTrampoline((PVOID)InternetCreateUrlWOffset, (PVOID)DetourInternetCreateUrlW, 5);
+                OriginalGethostbyname = (_gethostbyname)EnableTrampoline((PVOID)gethostbyname, (PVOID)DetourGethostbyname, 5);
+                OriginalShowWindow = (_ShowWindow)EnableTrampoline((PVOID)ShowWindow, (PVOID)DetourShowWindow, 15);
 
                 MainHakVzlom();
                 break;
