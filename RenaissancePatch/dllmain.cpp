@@ -6,15 +6,19 @@
 #include <psapi.h>
 #include <tlhelp32.h>
 #include <shellapi.h>
-#include <wininet.h>
 
 // дефайны для дефолтных значений
 #define DEFAULT_DOMAIN "proto.mrim.su"
 #define DEFAULT_AVATAR_DOMAIN "obraz.mrim.su"
+#define DEFAULT_SERVICES_DOMAIN "obraz.mrim.su"
 #define WEBSITE_REGISTER_URL (PWSTR)L"http://mrim.su/reg"
 
-PSTR MrimProtocolDomain = NULL;
-PSTR MrimAvatarsDomain = NULL;
+PSTR MrimProtocolDomain = NULL,
+    MrimAvatarsDomain = NULL,
+    MrimServicesDomain = NULL;
+
+PWSTR WebRegisterUrl = NULL;
+
 
 typedef struct hostent *(WSAAPI *_gethostbyname) (const char *name);
 typedef BOOL (WINAPI *_ShowWindow) (HWND hWnd, int nCmdShow);
@@ -31,13 +35,13 @@ struct hostent * WSAAPI DetourGethostbyname(const char* name) {
         return OriginalGethostbyname(MrimAvatarsDomain);
 
     if (strcmp(name, "pogoda.mail.ru") == 0)
-        return OriginalGethostbyname(MrimAvatarsDomain);
+        return OriginalGethostbyname(MrimServicesDomain);
 
     if (strcmp(name, "weather.agent.mail.ru") == 0)
-        return OriginalGethostbyname(MrimAvatarsDomain);
+        return OriginalGethostbyname(MrimServicesDomain);
 
     if (strcmp(name, "agent.mail.ru") == 0)
-        return OriginalGethostbyname(MrimAvatarsDomain);
+        return OriginalGethostbyname(MrimServicesDomain);
 
     return OriginalGethostbyname(name);
 }
@@ -48,7 +52,7 @@ BOOL WINAPI DetourShowWindow(HWND hWnd, int nCmdShow) {
 
         if (_wcsicmp(ClassName, L"MAgentIE2") == 0) {
             DestroyWindow(hWnd);
-            ShellExecuteW(NULL, L"open", WEBSITE_REGISTER_URL, NULL, NULL, SW_SHOW);
+            ShellExecuteW(NULL, L"open", WebRegisterUrl, NULL, NULL, SW_SHOW);
             return FALSE;
         }
     }
@@ -121,10 +125,14 @@ DWORD __cdecl MainHakVzlom(VOID) {
             // выставляем дефолт
             DWORD FirstTimeTmp = 0;
             RegSetValueExW(hKey, L"FirstTime", 0, REG_DWORD, (PBYTE)&FirstTimeTmp, sizeof(FirstTimeTmp));
-            RegSetValueExA(hKey, "MrimDomain", 0, REG_SZ, (PBYTE)DEFAULT_DOMAIN, sizeof(DEFAULT_DOMAIN));
-            RegSetValueExA(hKey, "MrimAvatarDomain", 0, REG_SZ, (PBYTE)DEFAULT_AVATAR_DOMAIN, sizeof(DEFAULT_AVATAR_DOMAIN)+1);
+            RegSetValueExA(hKey, "MrimDomain", 0, REG_SZ, (PBYTE)DEFAULT_DOMAIN, strlen(DEFAULT_DOMAIN));
+            RegSetValueExA(hKey, "MrimAvatarDomain", 0, REG_SZ, (PBYTE)DEFAULT_AVATAR_DOMAIN, strlen(DEFAULT_AVATAR_DOMAIN)+1);
+            RegSetValueExA(hKey, "MrimServices", 0, REG_SZ, (PBYTE)DEFAULT_SERVICES_DOMAIN, strlen(DEFAULT_SERVICES_DOMAIN)+1);
+            RegSetValueExW(hKey, L"WebRegisterUrl", 0, REG_SZ, (PBYTE)WEBSITE_REGISTER_URL, wcslen(WEBSITE_REGISTER_URL) * sizeof(WCHAR) + 1);
             MrimProtocolDomain = (PSTR)DEFAULT_DOMAIN;
             MrimAvatarsDomain = (PSTR)DEFAULT_AVATAR_DOMAIN;
+            MrimServicesDomain = (PSTR)DEFAULT_SERVICES_DOMAIN;
+            WebRegisterUrl = (PWSTR)WEBSITE_REGISTER_URL;
             // юзера уведомляем
             MessageBoxW(NULL, L"Похоже, вы установили патч ручным способом. Отредактируйте параметры на соответствующие вашим в Редакторе Реестра по адресу HKCU/SOFTWARE/Renaissance", L"Renaissance Patch", MB_OK | MB_ICONINFORMATION);
         }
@@ -133,7 +141,7 @@ DWORD __cdecl MainHakVzlom(VOID) {
 
         // буфер для домена авок
         WCHAR bufAva[255] = { 0 };
-        DWORD dwAvaBufSize = sizeof(Buf);
+        DWORD dwAvaBufSize = sizeof(bufAva);
         if (RegQueryValueExW(hKey, L"MrimAvatarDomain", 0, &dwType, (LPBYTE)bufAva, &dwAvaBufSize) == ERROR_SUCCESS) {
             MrimAvatarsDomain = WideToChar(bufAva);
         }
@@ -141,6 +149,28 @@ DWORD __cdecl MainHakVzlom(VOID) {
         else {
             MrimAvatarsDomain = (PSTR)DEFAULT_AVATAR_DOMAIN;
         }
+
+        WCHAR bufServices[255] = { 0 };
+        DWORD dwServiceBufSize = sizeof(bufServices);
+        if (RegQueryValueExW(hKey, L"MrimServicesDomain", 0, &dwType, (LPBYTE)bufServices, &dwServiceBufSize) == ERROR_SUCCESS) {
+            MrimServicesDomain = WideToChar(bufServices);
+        }
+
+        else {
+            MrimServicesDomain = (PSTR)DEFAULT_SERVICES_DOMAIN;
+        }
+
+        WCHAR bufRegister[255] = { 0 };
+        DWORD dwRegisterBufSize = sizeof(bufRegister) ;
+        if (RegQueryValueExW(hKey, L"WebRegisterUrl", 0, &dwType, (LPBYTE)bufRegister, &dwRegisterBufSize) == ERROR_SUCCESS) {
+            WebRegisterUrl = (PWSTR)GlobalAlloc(GMEM_ZEROINIT, wcslen(bufRegister) * sizeof(WCHAR) + 1);
+            wcscpy(WebRegisterUrl, bufRegister);
+        }
+
+        else {
+            WebRegisterUrl = (PWSTR)WEBSITE_REGISTER_URL;
+        }
+
         // чистим буфер от гавна
         memset(Buf, 0, sizeof(Buf));
 

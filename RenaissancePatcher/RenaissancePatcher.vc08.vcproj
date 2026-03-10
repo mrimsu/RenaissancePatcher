@@ -62,7 +62,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="dbghelp.lib shlwapi.lib"
+				AdditionalDependencies="dbghelp.lib shlwapi.lib version.lib"
 				LinkIncremental="2"
 				UACExecutionLevel="2"
 				GenerateDebugInformation="true"
@@ -133,7 +133,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="dbghelp.lib shlwapi.lib"
+				AdditionalDependencies="dbghelp.lib shlwapi.lib version.lib"
 				LinkIncremental="2"
 				UACExecutionLevel="2"
 				GenerateDebugInformation="true"
@@ -174,11 +174,11 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\consts.h"
+				RelativePath=".\bytepatch.h"
 				>
 			</File>
 			<File
-				RelativePath=".\bytepatch.h"
+				RelativePath=".\consts.h"
 				>
 			</File>
 			<File

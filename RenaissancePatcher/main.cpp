@@ -521,7 +521,7 @@ LRESULT CALLBACK ExtrasWindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lPa
 				}
 
 				case REN_CLEAN_BUTTON: {
-					if (MessageBoxW(Hwnd, L"ВНИМАНИЕ! Данная операция необратимо очистит настройки патча. Это приведёт к сбросу настроек сервера.", L"Внимание, опасная операция!", MB_YESNO | MB_ICONWARNING) != IDYES)
+					if (MessageBoxW(Hwnd, L"ВНИМАНИЕ! Данная операция необратимо очистит настройки патча. Это приведёт к сбросу настроек подключения к серверу.", L"Внимание, опасная операция!", MB_YESNO | MB_ICONWARNING) != IDYES)
 						break;
 
 					HKEY Hkey;
