@@ -6,3 +6,5 @@ IDR_RCDATA2 RCDATA "..\\RenaissancePatch\\build\\bin\\RenaissancePatch.dll"
 IDB_BITMAP1 BITMAP "Assets\\patcher_bg.bmp"
 
 IDI_ICON1 ICON "Assets\\ren128.ico"
+
+IDR_RCDATA3 RCDATA "Assets\\bgm.xm"

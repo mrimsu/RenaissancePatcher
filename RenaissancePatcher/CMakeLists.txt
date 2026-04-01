@@ -11,5 +11,5 @@ endif ()
 
 target_sources(${PROJECT_NAME} PRIVATE res_mingw.rc)
 add_compile_definitions(_WIN32_WINNT_WIN2K)
-target_link_libraries(${PROJECT_NAME} dbghelp gdi32 shell32 shlwapi version -static -static-libgcc -static-libstdc++) 
-target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror -O2 -municode)
+target_link_libraries(${PROJECT_NAME} dbghelp gdi32 shell32 shlwapi winmm version -static -static-libgcc -static-libstdc++) 
+target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -fpermissive -municode)

@@ -2,3 +2,4 @@
 #define IDR_RCDATA2 102
 #define IDI_ICON1 1
 #define IDB_BITMAP1 103
+#define IDR_RCDATA3 104

@@ -12,11 +12,15 @@
 #define REN_CLEAN_BUTTON 106
 #define SERVER_TEXTBOX 107
 #define AVATAR_SERVER_TEXTBOX 108
+#define MRIM_SERVICES_TEXTBOX 109
+#define WEB_REGISTER_TEXTBOX 110
 
 typedef struct _ControlHandles {
 	HWND SslCheckbox;
 	HWND ServerEditBox;
 	HWND AvatarServerEditBox;
+	HWND MrimServicesTextbox;
+	HWND WebRegisterDomain;
 } ControlHandles;
 
 ControlHandles ExtraDialogControls;
@@ -37,7 +41,6 @@ PCWSTR MainClassName = L"Renaissance001", //source engine nerds should guess the
 INT WINAPI WinMain(HINSTANCE Instance, HINSTANCE OldInst, LPSTR CmdLine, INT CmdShow) {
 	UNREFERENCED_PARAMETER(OldInst);
 	UNREFERENCED_PARAMETER(CmdLine);
-
 	//this part is intended for silent install (online installer etc)
 	INT Argc;
 	PWSTR *Argv = CommandLineToArgvW(GetCommandLineW(), &Argc);
@@ -144,11 +147,6 @@ BOOL WINAPI GetRegistryValues(VOID) {
 	else 
 		SendMessageW(ExtraDialogControls.ServerEditBox, WM_SETTEXT, NULL, (LPARAM)DEFAULT_SERVER);
 
-	RegCloseKey(Hkey);
-
-	if (RegOpenKeyW(HKEY_CURRENT_USER, L"Software\\Renaissance", &Hkey) != ERROR_SUCCESS)
-		return FALSE;
-
 	PWSTR AvatarServerAddrData = NULL;
 	DWORD AvatarServerAddrSize = 0,
 		AvatarServerAddrType = 0;
@@ -171,6 +169,52 @@ BOOL WINAPI GetRegistryValues(VOID) {
 
 	else 
 		SendMessageW(ExtraDialogControls.AvatarServerEditBox, WM_SETTEXT, NULL, (LPARAM)DEFAULT_AVATAR_SERVER);
+
+	PWSTR ServicesServerAddrData = NULL;
+	DWORD ServicesServerAddrSize = 0,
+		ServicesServerAddrType = 0;
+
+	if (RegQueryValueExW(Hkey, L"MrimServices", 0, &ServicesServerAddrType, (PBYTE)ServicesServerAddrData, &ServicesServerAddrSize) == ERROR_SUCCESS) {
+		if (ServicesServerAddrType == REG_SZ) {
+			ServicesServerAddrData = (PWSTR)GlobalAlloc(GMEM_ZEROINIT, ServicesServerAddrSize * sizeof(WCHAR));
+
+			if (!ServicesServerAddrData) {
+				RegCloseKey(Hkey);
+				return FALSE;
+			}
+
+			RegQueryValueExW(Hkey, L"MrimServices", 0, &ServicesServerAddrType, (PBYTE)ServicesServerAddrData, &ServicesServerAddrSize);
+			SendMessageW(ExtraDialogControls.MrimServicesTextbox, WM_SETTEXT, NULL, (LPARAM)ServicesServerAddrData);
+
+		GlobalFree(ServicesServerAddrData);
+		}
+	}
+
+	else 
+		SendMessageW(ExtraDialogControls.AvatarServerEditBox, WM_SETTEXT, NULL, (LPARAM)DEFAULT_MRIM_SERVICES);
+
+	PWSTR RegisterUrlData = NULL;
+	DWORD RegisterUrlSize = 0,
+		RegisterUrlType = 0;
+
+	if (RegQueryValueExW(Hkey, L"WebRegisterUrl", 0, &RegisterUrlType, (PBYTE)RegisterUrlData, &RegisterUrlSize) == ERROR_SUCCESS) {
+		if (RegisterUrlType == REG_SZ) {
+			RegisterUrlData = (PWSTR)GlobalAlloc(GMEM_ZEROINIT, RegisterUrlSize * sizeof(WCHAR));
+
+			if (!RegisterUrlData) {
+				RegCloseKey(Hkey);
+				return FALSE;
+			}
+
+			RegQueryValueExW(Hkey, L"WebRegisterUrl", 0, &RegisterUrlType, (PBYTE)RegisterUrlData, &RegisterUrlSize);
+			SendMessageW(ExtraDialogControls.WebRegisterDomain, WM_SETTEXT, NULL, (LPARAM)RegisterUrlData);
+
+			GlobalFree(RegisterUrlData);
+		}
+	}
+
+	else 
+		SendMessageW(ExtraDialogControls.WebRegisterDomain, WM_SETTEXT, NULL, (LPARAM)DEFAULT_MRIM_SERVICES);
 
 	RegCloseKey(Hkey);
 
@@ -198,22 +242,34 @@ BOOL WINAPI SetRegistryValues(BOOL IsRanFromExtras) {
     	RegSetValueExW(Hkey, L"FirstTime", 0, REG_DWORD, (BYTE *)&FirstTimeTmp, sizeof(FirstTimeTmp));
 
 		WCHAR UserServerAddr[MAX_ADDR_LEN],
-			UserAvatarServerAddr[MAX_ADDR_LEN];
+			UserAvatarServerAddr[MAX_ADDR_LEN],
+			UserServicesServerAddr[MAX_ADDR_LEN],
+			UserWebRegisterUrl[MAX_ADDR_LEN];
 
 		ZeroMemory(UserServerAddr, sizeof(WCHAR) * MAX_ADDR_LEN);
 		ZeroMemory(UserAvatarServerAddr, sizeof(WCHAR) * MAX_ADDR_LEN);
+		ZeroMemory(UserServicesServerAddr, sizeof(WCHAR) * MAX_ADDR_LEN);
+		ZeroMemory(UserWebRegisterUrl, sizeof(WCHAR) * MAX_ADDR_LEN);
 
 		GetWindowTextW(ExtraDialogControls.ServerEditBox, UserServerAddr, MAX_ADDR_LEN);
 		GetWindowTextW(ExtraDialogControls.AvatarServerEditBox, UserAvatarServerAddr, MAX_ADDR_LEN);
+		GetWindowTextW(ExtraDialogControls.MrimServicesTextbox, UserServicesServerAddr, MAX_ADDR_LEN);
+		GetWindowTextW(ExtraDialogControls.WebRegisterDomain, UserWebRegisterUrl, MAX_ADDR_LEN);
 
-		UserServerAddr[MAX_ADDR_LEN - 1 ] = '\0';
+		UserServerAddr[MAX_ADDR_LEN - 1] = '\0';
 		UserAvatarServerAddr[MAX_ADDR_LEN - 1] = '\0';
+		UserServicesServerAddr[MAX_ADDR_LEN - 1] = '\0';
+		UserWebRegisterUrl[MAX_ADDR_LEN - 1] = '\0';
 
 		size_t ServStringLen = wcslen(UserServerAddr),
-			AvatarServStringLen = wcslen(UserAvatarServerAddr);
+			AvatarServStringLen = wcslen(UserAvatarServerAddr),
+			ServicesServStringLen = wcslen(UserServicesServerAddr),
+			WebRegisterUrlStringLen = wcslen(UserWebRegisterUrl);
 
 		RegSetValueExW(Hkey, L"MrimDomain", 0, REG_SZ, (BYTE*)UserServerAddr, sizeof(WCHAR) * ServStringLen);
     	RegSetValueExW(Hkey, L"MrimAvatarDomain", 0, REG_SZ, (BYTE*)UserAvatarServerAddr, sizeof(WCHAR) * AvatarServStringLen);
+		RegSetValueExW(Hkey, L"MrimServices", 0, REG_SZ, (BYTE*)UserServicesServerAddr, sizeof(WCHAR) * ServicesServStringLen);
+		RegSetValueExW(Hkey, L"WebRegisterUrl", 0, REG_SZ, (BYTE*)UserWebRegisterUrl, sizeof(WCHAR) * WebRegisterUrlStringLen);
 
 		RegCloseKey(Hkey);
 
@@ -243,6 +299,8 @@ BOOL WINAPI SetRegistryValues(BOOL IsRanFromExtras) {
     RegSetValueExW(Hkey, L"FirstTime", 0, REG_DWORD, (BYTE *)&FirstTimeTmp, sizeof(FirstTimeTmp));
     RegSetValueExW(Hkey, L"MrimDomain", 0, REG_SZ, (BYTE*)DEFAULT_SERVER, sizeof(WCHAR) * wcslen(DEFAULT_SERVER));
     RegSetValueExW(Hkey, L"MrimAvatarDomain", 0, REG_SZ, (BYTE*)DEFAULT_AVATAR_SERVER, sizeof(WCHAR) * wcslen(DEFAULT_AVATAR_SERVER));
+	RegSetValueExW(Hkey, L"MrimServices", 0, REG_SZ, (BYTE*)DEFAULT_MRIM_SERVICES, sizeof(WCHAR) * wcslen(DEFAULT_MRIM_SERVICES));
+	RegSetValueExW(Hkey, L"WebRegisterUrl", 0, REG_SZ, (BYTE*)DEFAULT_WEB_REGISTER, sizeof(WCHAR) * wcslen(DEFAULT_WEB_REGISTER));
 
 	RegCloseKey(Hkey);
 
@@ -382,8 +440,8 @@ LRESULT CALLBACK MainWindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lPara
 			HWND PatchButton = CreateWindowW(L"BUTTON", L"Пропатчить", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, 680, 161, 100, 30, Hwnd, (HMENU)PATCH_BUTTON, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL),
 				WorkaroundsButton = CreateWindowW(L"BUTTON", L"Дополнительно", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, 570, 161, 100, 30, Hwnd, (HMENU)EXTRAS_BUTTON, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);
 
-			SendMessage(PatchButton, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
-			SendMessage(WorkaroundsButton, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+			SendMessageW(PatchButton, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+			SendMessageW(WorkaroundsButton, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
 			break;
 		}
 
@@ -453,7 +511,7 @@ LRESULT CALLBACK MainWindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lPara
 		}
 
         default: {
-            return DefWindowProc(Hwnd, Msg, wParam, lParam);
+            return DefWindowProcW(Hwnd, Msg, wParam, lParam);
         }
     }
     return 0;
@@ -472,19 +530,23 @@ LRESULT CALLBACK ExtrasWindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lPa
 			ExtraDialogControls.SslCheckbox = CreateWindowW(L"BUTTON", L"Включить SSL", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX, 10, 78, 90, 20, Hwnd, (HMENU)SSL_CHECKBOX, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);
 
 			ExtraDialogControls.ServerEditBox = CreateWindowW(L"EDIT", DEFAULT_SERVER, WS_TABSTOP | WS_BORDER | WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOVSCROLL, 10, 102, 150, 20, Hwnd, (HMENU)SERVER_TEXTBOX, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);
-			ExtraDialogControls.AvatarServerEditBox = CreateWindowW(L"EDIT", DEFAULT_AVATAR_SERVER, WS_TABSTOP | WS_BORDER | WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOVSCROLL, 10, 125, 150, 20, Hwnd, (HMENU)AVATAR_SERVER_TEXTBOX, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);;
+			ExtraDialogControls.AvatarServerEditBox = CreateWindowW(L"EDIT", DEFAULT_AVATAR_SERVER, WS_TABSTOP | WS_BORDER | WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOVSCROLL, 10, 125, 150, 20, Hwnd, (HMENU)AVATAR_SERVER_TEXTBOX, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);
+			ExtraDialogControls.MrimServicesTextbox = CreateWindowW(L"EDIT", DEFAULT_MRIM_SERVICES, WS_TABSTOP | WS_BORDER | WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOVSCROLL, 10, 148, 150, 20, Hwnd, (HMENU)MRIM_SERVICES_TEXTBOX, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);
+			ExtraDialogControls.WebRegisterDomain = CreateWindowW(L"EDIT", DEFAULT_WEB_REGISTER, WS_TABSTOP | WS_BORDER | WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOVSCROLL, 10, 156, 150, 20, Hwnd, (HMENU)WEB_REGISTER_TEXTBOX, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);
 
-			SendMessage(ApplyButton, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
-			SendMessage(CleanMraButton, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
-			SendMessage(CleanRenButton, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+			SendMessageW(ApplyButton, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+			SendMessageW(CleanMraButton, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+			SendMessageW(CleanRenButton, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
 
-			SendMessage(CleanMraCaption, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
-			SendMessage(CleanRenCaption, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+			SendMessageW(CleanMraCaption, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+			SendMessageW(CleanRenCaption, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
 
-			SendMessage(ExtraDialogControls.SslCheckbox, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+			SendMessageW(ExtraDialogControls.SslCheckbox, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
 
-			SendMessage(ExtraDialogControls.ServerEditBox, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
-			SendMessage(ExtraDialogControls.AvatarServerEditBox, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+			SendMessageW(ExtraDialogControls.ServerEditBox, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+			SendMessageW(ExtraDialogControls.AvatarServerEditBox, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+			SendMessageW(ExtraDialogControls.MrimServicesTextbox, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+			SendMessageW(ExtraDialogControls.WebRegisterDomain, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
 
 			GetRegistryValues();
 
@@ -552,7 +614,7 @@ LRESULT CALLBACK ExtrasWindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lPa
 		}
 
         default: {
-            return DefWindowProc(Hwnd, Msg, wParam, lParam);
+            return DefWindowProcW(Hwnd, Msg, wParam, lParam);
         }
     }
     return 0;
