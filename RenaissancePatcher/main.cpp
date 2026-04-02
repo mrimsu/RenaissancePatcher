@@ -214,7 +214,7 @@ BOOL WINAPI GetRegistryValues(VOID) {
 	}
 
 	else 
-		SendMessageW(ExtraDialogControls.WebRegisterDomain, WM_SETTEXT, NULL, (LPARAM)DEFAULT_MRIM_SERVICES);
+		SendMessageW(ExtraDialogControls.WebRegisterDomain, WM_SETTEXT, NULL, (LPARAM)DEFAULT_WEB_REGISTER);
 
 	RegCloseKey(Hkey);
 
@@ -437,8 +437,15 @@ LRESULT CALLBACK MainWindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lPara
         }
 
 		case WM_CREATE: {
-			HWND PatchButton = CreateWindowW(L"BUTTON", L"Пропатчить", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, 680, 161, 100, 30, Hwnd, (HMENU)PATCH_BUTTON, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL),
-				WorkaroundsButton = CreateWindowW(L"BUTTON", L"Дополнительно", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, 570, 161, 100, 30, Hwnd, (HMENU)EXTRAS_BUTTON, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);
+			RECT WndRect;
+
+			GetWindowRect(Hwnd, &WndRect);
+
+			DWORD WndWidth = WndRect.right - WndRect.left,
+				WndHeight = WndRect.bottom - WndRect.top;
+
+			HWND PatchButton = CreateWindowW(L"BUTTON", L"Пропатчить", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, WndWidth - 120, WndHeight - 69, 100, 30, Hwnd, (HMENU)PATCH_BUTTON, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL),
+				WorkaroundsButton = CreateWindowW(L"BUTTON", L"Дополнительно", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, WndWidth - 230, WndHeight - 69, 100, 30, Hwnd, (HMENU)EXTRAS_BUTTON, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);
 
 			SendMessageW(PatchButton, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
 			SendMessageW(WorkaroundsButton, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
@@ -470,8 +477,14 @@ LRESULT CALLBACK MainWindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lPara
 			
 			PCWSTR Body = L"Выберите вашу копию magent.exe для установки патча сервера Renaissance";
 
+			RECT WndRect;
+
+			GetWindowRect(Hwnd, &WndRect);
+
+			DWORD WndWidth = WndRect.right - WndRect.left;
+
 			SelectObject(DC, BodyFont);
-			TextOutW(DC, 8, 126, Body, wcslen(Body));
+			TextOutW(DC, WndWidth - 794, 126, Body, wcslen(Body));
 
 			EndPaint(Hwnd, &Ps);
 			DeleteObject(BodyFont);
@@ -501,7 +514,7 @@ LRESULT CALLBACK MainWindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lPara
 				}
 
 				case EXTRAS_BUTTON: {
-					HWND ExtraWnd = CreateWindowW(ExtrasClassName, L"Дополнительно", WS_OVERLAPPED | WS_VISIBLE | WS_CAPTION | WS_SYSMENU, CW_USEDEFAULT, CW_USEDEFAULT, 200, 240, Hwnd, NULL, GetModuleHandleW(NULL), NULL);
+					HWND ExtraWnd = CreateWindowW(ExtrasClassName, L"Дополнительно", WS_OVERLAPPED | WS_VISIBLE | WS_CAPTION | WS_SYSMENU, CW_USEDEFAULT, CW_USEDEFAULT, 200, 260, Hwnd, NULL, GetModuleHandleW(NULL), NULL);
 					EnableWindow(Hwnd, FALSE);
     				UpdateWindow(ExtraWnd);
 					break;
@@ -520,7 +533,13 @@ LRESULT CALLBACK MainWindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lPara
 LRESULT CALLBACK ExtrasWindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
     switch (Msg) {
 		case WM_CREATE: {
-			HWND ApplyButton = CreateWindowW(L"BUTTON", L"Применить", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, 50, 180, 95, 20, Hwnd, (HMENU)APPLY_BUTTON, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL),
+			RECT WndRect;
+
+			GetWindowRect(Hwnd, &WndRect);
+
+			DWORD WndHeight = WndRect.bottom - WndRect.top;			
+
+			HWND ApplyButton = CreateWindowW(L"BUTTON", L"Применить", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, 50, WndHeight - 60, 95, 20, Hwnd, (HMENU)APPLY_BUTTON, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL),
 				CleanMraButton = CreateWindowW(L"BUTTON", L"Очистить", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, 130, 20, 55, 20, Hwnd, (HMENU)MRA_CLEAN_BUTTON, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL),
 				CleanRenButton = CreateWindowW(L"BUTTON", L"Очистить", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, 130, 50, 55, 20, Hwnd, (HMENU)REN_CLEAN_BUTTON, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);
 			
@@ -532,7 +551,7 @@ LRESULT CALLBACK ExtrasWindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lPa
 			ExtraDialogControls.ServerEditBox = CreateWindowW(L"EDIT", DEFAULT_SERVER, WS_TABSTOP | WS_BORDER | WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOVSCROLL, 10, 102, 150, 20, Hwnd, (HMENU)SERVER_TEXTBOX, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);
 			ExtraDialogControls.AvatarServerEditBox = CreateWindowW(L"EDIT", DEFAULT_AVATAR_SERVER, WS_TABSTOP | WS_BORDER | WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOVSCROLL, 10, 125, 150, 20, Hwnd, (HMENU)AVATAR_SERVER_TEXTBOX, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);
 			ExtraDialogControls.MrimServicesTextbox = CreateWindowW(L"EDIT", DEFAULT_MRIM_SERVICES, WS_TABSTOP | WS_BORDER | WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOVSCROLL, 10, 148, 150, 20, Hwnd, (HMENU)MRIM_SERVICES_TEXTBOX, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);
-			ExtraDialogControls.WebRegisterDomain = CreateWindowW(L"EDIT", DEFAULT_WEB_REGISTER, WS_TABSTOP | WS_BORDER | WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOVSCROLL, 10, 156, 150, 20, Hwnd, (HMENU)WEB_REGISTER_TEXTBOX, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);
+			ExtraDialogControls.WebRegisterDomain = CreateWindowW(L"EDIT", DEFAULT_WEB_REGISTER, WS_TABSTOP | WS_BORDER | WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOVSCROLL, 10, 171, 150, 20, Hwnd, (HMENU)WEB_REGISTER_TEXTBOX, (HINSTANCE)GetWindowLongPtr(Hwnd, GWLP_HINSTANCE), NULL);
 
 			SendMessageW(ApplyButton, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
 			SendMessageW(CleanMraButton, WM_SETFONT, (LPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
