@@ -43,6 +43,7 @@ struct hostent * WSAAPI DetourGethostbyname(const char* name) {
     if (strcmp(name, "agent.mail.ru") == 0)
         return OriginalGethostbyname(MrimServicesDomain);
 
+
     return OriginalGethostbyname(name);
 }
 
@@ -152,7 +153,7 @@ DWORD __cdecl MainHakVzlom(VOID) {
 
         WCHAR bufServices[255] = { 0 };
         DWORD dwServiceBufSize = sizeof(bufServices);
-        if (RegQueryValueExW(hKey, L"MrimServicesDomain", 0, &dwType, (LPBYTE)bufServices, &dwServiceBufSize) == ERROR_SUCCESS) {
+        if (RegQueryValueExW(hKey, L"MrimServices", 0, &dwType, (LPBYTE)bufServices, &dwServiceBufSize) == ERROR_SUCCESS) {
             MrimServicesDomain = WideToChar(bufServices);
         }
 
