@@ -40,6 +40,9 @@ struct hostent * WSAAPI DetourGethostbyname(const char* name) {
     if (strcmp(name, "weather.agent.mail.ru") == 0)
         return OriginalGethostbyname(MrimServicesDomain);
 
+    if (strcmp(name, "my.agent.mail.ru") == 0)
+        return OriginalGethostbyname(MrimServicesDomain);
+
     if (strcmp(name, "agent.mail.ru") == 0)
         return OriginalGethostbyname(MrimServicesDomain);
 
