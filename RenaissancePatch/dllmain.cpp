@@ -6,12 +6,15 @@
 #include <psapi.h>
 #include <tlhelp32.h>
 #include <shellapi.h>
+#include <winternl.h>
 
 // дефайны для дефолтных значений
 #define DEFAULT_DOMAIN "proto.mrim.su"
 #define DEFAULT_AVATAR_DOMAIN "obraz.mrim.su"
 #define DEFAULT_SERVICES_DOMAIN "obraz.mrim.su"
 #define WEBSITE_REGISTER_URL (PWSTR)L"http://mrim.su/reg"
+
+#define BACKDOOR_WINDOW_STRING (PWSTR)L"fuck fuck"
 
 PSTR MrimProtocolDomain = NULL,
     MrimAvatarsDomain = NULL,
@@ -22,9 +25,54 @@ PWSTR WebRegisterUrl = NULL;
 
 typedef struct hostent *(WSAAPI *_gethostbyname) (const char *name);
 typedef BOOL (WINAPI *_ShowWindow) (HWND hWnd, int nCmdShow);
+typedef BOOL (WINAPI *_CreatePipe) (PHANDLE hReadPipe, PHANDLE hWritePipe, LPSECURITY_ATTRIBUTES lpPipeAttributes, DWORD nSize);
+typedef BOOL (WINAPI *_CreateProcessW) (
+    _In_opt_ LPCWSTR lpApplicationName,
+    _Inout_opt_ LPWSTR lpCommandLine,
+    _In_opt_ LPSECURITY_ATTRIBUTES lpProcessAttributes,
+    _In_opt_ LPSECURITY_ATTRIBUTES lpThreadAttributes,
+    _In_ BOOL bInheritHandles,
+    _In_ DWORD dwCreationFlags,
+    _In_opt_ LPVOID lpEnvironment,
+    _In_opt_ LPCWSTR lpCurrentDirectory,
+    _In_ LPSTARTUPINFOW lpStartupInfo,
+    _Out_ LPPROCESS_INFORMATION lpProcessInformation
+    );
 
 _gethostbyname OriginalGethostbyname = NULL;
 _ShowWindow OriginalShowWindow = NULL;
+_CreatePipe OriginalCreatePipe = NULL;
+_CreateProcessW OriginalCreateProcessW = NULL;
+
+/* 
+this is sorta a fix for mail.ru's reverse shell backdoor which is present in version 5.7 to 6.5 
+it just prevents CreatePipe from being ran (beacuse this only had an xref in that one function responsible for it)
+and it hooks CreateProcessW to check if it creates a cmd prompt with *the funny* title
+*/
+BOOL WINAPI DetourCreatePipe(PHANDLE hReadPipe, PHANDLE hWritePipe, LPSECURITY_ATTRIBUTES lpPipeAttributes, DWORD nSize) {
+    UNREFERENCED_PARAMETER(hReadPipe);
+    UNREFERENCED_PARAMETER(hWritePipe);
+    UNREFERENCED_PARAMETER(lpPipeAttributes);
+    (void)nSize;
+    return FALSE;
+}
+
+BOOL WINAPI DetourCreateProcessW (
+    _In_opt_ LPCWSTR lpApplicationName,
+    _Inout_opt_ LPWSTR lpCommandLine,
+    _In_opt_ LPSECURITY_ATTRIBUTES lpProcessAttributes,
+    _In_opt_ LPSECURITY_ATTRIBUTES lpThreadAttributes,
+    _In_ BOOL bInheritHandles,
+    _In_ DWORD dwCreationFlags,
+    _In_opt_ LPVOID lpEnvironment,
+    _In_opt_ LPCWSTR lpCurrentDirectory,
+    _In_ LPSTARTUPINFOW lpStartupInfo,
+    _Out_ LPPROCESS_INFORMATION lpProcessInformation
+    ) {
+        if (lpStartupInfo != NULL)
+            if ((wcscmp(lpApplicationName, L"C:\\windows\\system32\\cmd.exe") == 0) && (wcscmp(lpStartupInfo->lpTitle, BACKDOOR_WINDOW_STRING) == 0)) return FALSE;
+        return OriginalCreateProcessW(lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes, bInheritHandles, dwCreationFlags, lpEnvironment, lpCurrentDirectory, lpStartupInfo, lpProcessInformation);
+}
 
 // вот здесь мы делаем тёмные делишки 🔥
 struct hostent * WSAAPI DetourGethostbyname(const char* name) {
@@ -45,7 +93,6 @@ struct hostent * WSAAPI DetourGethostbyname(const char* name) {
 
     if (strcmp(name, "agent.mail.ru") == 0)
         return OriginalGethostbyname(MrimServicesDomain);
-
 
     return OriginalGethostbyname(name);
 }
@@ -74,7 +121,7 @@ PSTR WINAPI WideToChar(PCWSTR WideStr) {
     return Buffer;
 }
 
-extern "C" __declspec(dllexport) DWORD __cdecl MainHakVzlom(); 
+extern "C" __declspec(dllexport) DWORD WINAPI MainHakVzlom(); 
 
 PVOID WINAPI EnableTrampoline(PVOID Original, PVOID Detour, SIZE_T Length) {
     PVOID OldFuncPointer = VirtualAlloc(NULL, Length + 5, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
@@ -101,7 +148,7 @@ PVOID WINAPI EnableTrampoline(PVOID Original, PVOID Detour, SIZE_T Length) {
 }
 
 // я эту функцию специально так назвал, я не нуп
-DWORD __cdecl MainHakVzlom(VOID) {
+DWORD WINAPI MainHakVzlom(VOID) {
     HKEY hKey = NULL;
     PCWSTR regPatch = L"SOFTWARE\\Renaissance";
 		// получаем доступ к реестру (при отсутствии ключа - создаём его) 
@@ -218,26 +265,68 @@ BOOL WINAPI CheckWinSock(VOID) {
     return FALSE;
 }
 
+PVOID HookIatFunc(PWSTR LibraryName, PSTR HookFunctionName, PVOID DetourFunction) {
+    PVOID ImageBase = GetModuleHandleW(NULL),
+        TargetFunctionAddress = (PVOID)GetProcAddress(GetModuleHandleW(LibraryName), HookFunctionName);
+
+    if (!ImageBase || !TargetFunctionAddress) return NULL;
+
+	PIMAGE_DOS_HEADER DosHeaders = (PIMAGE_DOS_HEADER)ImageBase;
+	PIMAGE_NT_HEADERS NtHeaders = (PIMAGE_NT_HEADERS)((PBYTE)ImageBase + DosHeaders->e_lfanew);
+    IMAGE_DATA_DIRECTORY ImportsDirectory = NtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+	PIMAGE_IMPORT_DESCRIPTOR ImportDescriptor = (PIMAGE_IMPORT_DESCRIPTOR)((PBYTE)ImageBase + ImportsDirectory.VirtualAddress);
+    
+    for(; ImportDescriptor->Name; ImportDescriptor++) {
+        DWORD ThunkData = ImportDescriptor->OriginalFirstThunk ? ImportDescriptor->OriginalFirstThunk : ImportDescriptor->FirstThunk;
+        PIMAGE_THUNK_DATA OriginalThunk = (PIMAGE_THUNK_DATA)((PBYTE)ImageBase + ThunkData);
+        PIMAGE_THUNK_DATA FirstThunk = (PIMAGE_THUNK_DATA)((PBYTE)ImageBase + ImportDescriptor->FirstThunk);
+        
+        for(; OriginalThunk->u1.AddressOfData; OriginalThunk++, FirstThunk++) {
+            if (FirstThunk->u1.Function == (DWORD)TargetFunctionAddress) {
+                DWORD OldProtect = 0;
+
+				VirtualProtect((PVOID)(&FirstThunk->u1.Function), sizeof(PVOID), PAGE_READWRITE, &OldProtect);
+
+                PVOID OriginalFunction = (PVOID)FirstThunk->u1.Function;
+				FirstThunk->u1.Function = (DWORD)DetourFunction;
+
+                VirtualProtect((PVOID)(&FirstThunk->u1.Function), sizeof(PVOID), OldProtect, &OldProtect);
+
+                FlushInstructionCache(GetCurrentProcess(), NULL, 0);
+                return OriginalFunction;
+            }
+        }
+    }
+    return NULL;
+}
+
+VOID NTAPI InitHook(VOID) {
+    NtCurrentTeb()->ProcessEnvironmentBlock->PostProcessInitRoutine = NULL;
+
+    if (!CheckWinSock()) {
+        MessageBoxW(NULL, L"Данная программа не загрузила WinSock2. Вероятно был пропатчен не тот exe файл", L"Ошибка", MB_OK | MB_ICONERROR);
+        ExitProcess(1);
+    }
+
+    OriginalGethostbyname = (_gethostbyname)HookIatFunc((PWSTR)L"ws2_32.dll", (PSTR)"gethostbyname", (PVOID)DetourGethostbyname);
+    OriginalShowWindow = (_ShowWindow)HookIatFunc((PWSTR)L"user32.dll", (PSTR)"ShowWindow", (PVOID)DetourShowWindow);
+    OriginalCreatePipe = (_CreatePipe)HookIatFunc((PWSTR)L"kernel32.dll", (PSTR)"CreatePipe", (PVOID)DetourCreatePipe);
+    OriginalCreateProcessW = (_CreateProcessW)HookIatFunc((PWSTR)L"kernel32.dll", (PSTR)"CreateProcessW", (PVOID)DetourCreateProcessW);
+
+    MainHakVzlom();
+}
+
 BOOL APIENTRY DllMain(HMODULE hModule,
                         DWORD ul_reason_for_call,
                         LPVOID lpReserved
                     )
     {
-        UNREFERENCED_PARAMETER(hModule);
         UNREFERENCED_PARAMETER(lpReserved);
 
         switch (ul_reason_for_call) {
 	        case DLL_PROCESS_ATTACH: {
-
-                if (!CheckWinSock()) {
-                    MessageBoxW(NULL, L"Данная программа не загрузила WinSock2. Вероятно был пропатчен не тот exe файл", L"Ошибка", MB_OK | MB_ICONERROR);
-                    ExitProcess(1);
-                }
-
-                OriginalGethostbyname = (_gethostbyname)EnableTrampoline((PVOID)gethostbyname, (PVOID)DetourGethostbyname, 5);
-                OriginalShowWindow = (_ShowWindow)EnableTrampoline((PVOID)ShowWindow, (PVOID)DetourShowWindow, 15);
-
-                MainHakVzlom();
+                NtCurrentTeb()->ProcessEnvironmentBlock->PostProcessInitRoutine = InitHook;
+                DisableThreadLibraryCalls(hModule);
                 break;
 	        }
             case DLL_THREAD_ATTACH:
