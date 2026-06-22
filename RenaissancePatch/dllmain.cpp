@@ -6,7 +6,51 @@
 #include <psapi.h>
 #include <tlhelp32.h>
 #include <shellapi.h>
-#include <winternl.h>
+//#include <winternl.h>
+
+typedef struct _UNICODE_STRING {
+    USHORT Length;
+    USHORT MaximumLength;
+    PWSTR Buffer;
+} UNICODE_STRING;
+
+typedef struct _PEB_LDR_DATA {
+    BYTE Reserved1[8];
+    PVOID Reserved2[3];
+    LIST_ENTRY InMemoryOrderModuleList;
+} PEB_LDR_DATA,*PPEB_LDR_DATA;
+
+typedef struct _RTL_USER_PROCESS_PARAMETERS {
+    BYTE Reserved1[16];
+    PVOID Reserved2[10];
+    UNICODE_STRING ImagePathName;
+    UNICODE_STRING CommandLine;
+} RTL_USER_PROCESS_PARAMETERS,*PRTL_USER_PROCESS_PARAMETERS;
+  
+typedef VOID (NTAPI *PPS_POST_PROCESS_INIT_ROUTINE)(VOID);
+  
+typedef struct _PEB {
+    BYTE Reserved1[2];
+    BYTE BeingDebugged;
+    BYTE Reserved2[1];
+    PVOID Reserved3[2];
+    PPEB_LDR_DATA Ldr;
+    PRTL_USER_PROCESS_PARAMETERS ProcessParameters;
+    PVOID Reserved4[3];
+    PVOID AtlThunkSListPtr;
+    PVOID Reserved5;
+    ULONG Reserved6;
+    PVOID Reserved7;
+    ULONG Reserved8;
+    ULONG AtlThunkSListPtr32;
+    PVOID Reserved9[45];
+    BYTE Reserved10[96];
+    PPS_POST_PROCESS_INIT_ROUTINE PostProcessInitRoutine;
+    BYTE Reserved11[128];
+    PVOID Reserved12[1];
+    ULONG SessionId;
+} PEB, *PPEB;
+
 
 // дефайны для дефолтных значений
 #define DEFAULT_DOMAIN "proto.mrim.su"
@@ -21,7 +65,6 @@ PSTR MrimProtocolDomain = NULL,
     MrimServicesDomain = NULL;
 
 PWSTR WebRegisterUrl = NULL;
-
 
 typedef struct hostent *(WSAAPI *_gethostbyname) (const char *name);
 typedef BOOL (WINAPI *_ShowWindow) (HWND hWnd, int nCmdShow);
@@ -121,7 +164,7 @@ PSTR WINAPI WideToChar(PCWSTR WideStr) {
     return Buffer;
 }
 
-extern "C" __declspec(dllexport) DWORD WINAPI MainHakVzlom(); 
+extern "C" __declspec(dllexport) DWORD __cdecl MainHakVzlom(); 
 
 PVOID WINAPI EnableTrampoline(PVOID Original, PVOID Detour, SIZE_T Length) {
     PVOID OldFuncPointer = VirtualAlloc(NULL, Length + 5, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
@@ -148,7 +191,7 @@ PVOID WINAPI EnableTrampoline(PVOID Original, PVOID Detour, SIZE_T Length) {
 }
 
 // я эту функцию специально так назвал, я не нуп
-DWORD WINAPI MainHakVzlom(VOID) {
+DWORD __cdecl MainHakVzlom(VOID) {
     HKEY hKey = NULL;
     PCWSTR regPatch = L"SOFTWARE\\Renaissance";
 		// получаем доступ к реестру (при отсутствии ключа - создаём его) 
@@ -301,7 +344,7 @@ PVOID HookIatFunc(PWSTR LibraryName, PSTR HookFunctionName, PVOID DetourFunction
 }
 
 VOID NTAPI InitHook(VOID) {
-    NtCurrentTeb()->ProcessEnvironmentBlock->PostProcessInitRoutine = NULL;
+    ((PPEB)__readfsdword(0x30))->PostProcessInitRoutine = NULL;
 
     if (!CheckWinSock()) {
         MessageBoxW(NULL, L"Данная программа не загрузила WinSock2. Вероятно был пропатчен не тот exe файл", L"Ошибка", MB_OK | MB_ICONERROR);
@@ -325,7 +368,9 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 
         switch (ul_reason_for_call) {
 	        case DLL_PROCESS_ATTACH: {
-                NtCurrentTeb()->ProcessEnvironmentBlock->PostProcessInitRoutine = InitHook;
+                //NtCurrentTeb()->ProcessEnvironmentBlock->PostProcessInitRoutine = InitHook;
+                ((PPEB)__readfsdword(0x30))->PostProcessInitRoutine = InitHook;
+
                 DisableThreadLibraryCalls(hModule);
                 break;
 	        }
