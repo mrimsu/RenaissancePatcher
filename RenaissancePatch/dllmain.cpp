@@ -7,7 +7,7 @@
 #include <tlhelp32.h>
 #include <shellapi.h>
 //#include <winternl.h>
-
+/*
 typedef struct _UNICODE_STRING {
     USHORT Length;
     USHORT MaximumLength;
@@ -51,7 +51,7 @@ typedef struct _PEB {
     ULONG SessionId;
 } PEB, *PPEB;
 
-
+*/
 // дефайны для дефолтных значений
 #define DEFAULT_DOMAIN "proto.mrim.su"
 #define DEFAULT_AVATAR_DOMAIN "obraz.mrim.su"
@@ -344,7 +344,7 @@ PVOID HookIatFunc(PWSTR LibraryName, PSTR HookFunctionName, PVOID DetourFunction
 }
 
 VOID NTAPI InitHook(VOID) {
-    ((PPEB)__readfsdword(0x30))->PostProcessInitRoutine = NULL;
+    //((PPEB)__readfsdword(0x30))->PostProcessInitRoutine = NULL;
 
     if (!CheckWinSock()) {
         MessageBoxW(NULL, L"Данная программа не загрузила WinSock2. Вероятно был пропатчен не тот exe файл", L"Ошибка", MB_OK | MB_ICONERROR);
@@ -369,7 +369,9 @@ BOOL APIENTRY DllMain(HMODULE hModule,
         switch (ul_reason_for_call) {
 	        case DLL_PROCESS_ATTACH: {
                 //NtCurrentTeb()->ProcessEnvironmentBlock->PostProcessInitRoutine = InitHook;
-                ((PPEB)__readfsdword(0x30))->PostProcessInitRoutine = InitHook;
+                //((PPEB)__readfsdword(0x30))->PostProcessInitRoutine = InitHook;
+
+                InitHook();
 
                 DisableThreadLibraryCalls(hModule);
                 break;
